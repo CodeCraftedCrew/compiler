@@ -1,0 +1,3 @@
+function tan(x) => sin(x) / cos(x);
+
+print(tan(4));
