@@ -17,6 +17,7 @@ class TypeCollector:
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode):
         self.context = Context()
+        self.context.define_built_in_methods()
 
         for type_definition in [node for node in node.statements if isinstance(node, TypeDeclarationNode)]:
             self.visit(type_definition)

@@ -1,4 +1,5 @@
 from ast_nodes.ast import Node, AtomicNode, BinaryNode
+from lexer.tools import Token
 from semantic.types import UnknownType
 
 
@@ -89,13 +90,14 @@ class DestructiveAssignNode(ExpressionNode):
 
 
 class CallNode(ExpressionNode):
-    def __init__(self, obj: ExpressionNode, idx: str, params: list[ParameterDeclarationNode],
+    def __init__(self, obj: ExpressionNode, token: Token, params: list[ParameterDeclarationNode],
                  is_attribute=False):
         super().__init__()
         self.obj = obj
-        self.id = idx
+        self.token = token
         self.params = params
         self.is_attribute = is_attribute
+        self.params_inferred_type = []
 
 
 class ElIfNode(ExpressionNode):

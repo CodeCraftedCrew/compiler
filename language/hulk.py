@@ -282,7 +282,7 @@ def get_hulk_grammar():
     unary_expression %= primary_expression, lambda h, s: s[1]
 
     primary_expression %= literal, lambda h, s: s[1]
-    primary_expression %= invocation_expression, lambda h, s: s[1]
+    primary_expression %= invocation_expression, lambda h, s: CallNode(None, s[1][0], s[1][1])
     primary_expression %= identifier, lambda h, s: s[1]
     primary_expression %= vector, lambda h, s: s[1]
     primary_expression %= index, lambda h, s: s[1]

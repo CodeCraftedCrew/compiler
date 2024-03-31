@@ -3,7 +3,7 @@ from ast_nodes.hulk import ProgramNode, TypeDeclarationNode, BlockNode, LiteralN
     ProtocolDeclarationNode, FunctionDeclarationNode, ParameterDeclarationNode, AttributeDeclarationNode, \
     DestructiveAssignNode, CallNode, IfNode, ForNode, WhileNode, LetNode, InstantiateNode, MinusNode, PlusNode, DivNode, \
     StarNode, PowerNode, DifferentNode, LessEqualNode, GreaterNode, EqualNode, LessNode, GreaterEqualNode, IsNode, \
-    AsNode, OrNode, AndNode, ConcatNode, NotNode
+    AsNode, OrNode, AndNode, ConcatNode, NotNode, ModNode
 from lexer.tools import TokenType
 from semantic.types import UnknownType, BooleanType, NumberType, StringType, NullType, UndefinedType, IterableType, Type
 from semantic.scope import Scope
@@ -44,6 +44,8 @@ class TypeInference:
             self.changes = False
 
             scope = Scope()
+            scope.add_builtin()
+
             for statement in node.statements:
                 self.visit(statement, scope.create_child_scope())
 
@@ -169,32 +171,30 @@ class TypeInference:
     def visit(self, call: CallNode, scope: Scope):
 
         if call.obj is None:
-            success, method = self.context.get_method(call.id)
+            success, method = self.context.get_method(call.token.lex)
         else:
             obj_type = self.visit(call.obj, scope)
 
             if obj_type in [None, UnknownType()]:
                 return UnknownType()
 
-            success, method = obj_type.get_method(call.id)
+            success, method = obj_type.get_method(call.token.lex)
 
         if not success:
-            self.error(method, line=call.line)
-            return UndefinedType()
+            return
 
         param_types = [self.visit(param, scope) for param in call.params]
 
-        if len(param_types) != len(method.param_types):
-            self.error(message=f"{method.name} expects {len(method.param_types)} parameters, got {len(param_types)}")
+        if param_types != call.params_inferred_type:
+            self.changes = True
+            call.params_inferred_type = param_types
 
         for i in range(len(method.param_types)):
-            if method.param_types[i] is UnknownType or param_types[i] is UnknownType():
-                continue
-            if method.param_types[i].name != param_types[i].name:
-                self.error(f"Parameter type mismatch, on {method.param_names[i]} got {param_types[i].name} "
-                           f"expected {method.param_types[i].name}", line=call.line)
+            if param_types[i] is UnknownType and method.param_types[i] is not UnknownType:
+                self.changes = True
+                call.params[i].inferred_type = method.param_types[i]
 
-        return method.return_type or method.inferred_type or UnknownType()  # Todo add inferred type to methods
+        return method.return_type or method.inferred_type
 
     @visitor.when(IfNode)
     def visit(self, node: IfNode, scope: Scope):
@@ -302,7 +302,9 @@ class TypeInference:
     def visit(self, node: BinaryNode, scope: Scope):
 
         inferred_type_left = self.visit(node.left, scope)
-        node.left.inferred_type = inferred_type_left
+        if node.left.inferred_type != inferred_type_left:
+            self.changes = True
+            node.left.inferred_type = inferred_type_left
 
         if isinstance(node, AsNode):
             success, declared_type = self.context.get_type(node.right)
@@ -313,10 +315,13 @@ class TypeInference:
                 return declared_type
 
         inferred_type_right = self.visit(node.right, scope)
-        node.right.inferred_type = inferred_type_right
+
+        if node.right.inferred_type != inferred_type_right:
+            self.changes = True
+            node.right.inferred_type = inferred_type_right
 
         if (isinstance(node, PlusNode) or isinstance(node, MinusNode) or isinstance(node, DivNode)
-                or isinstance(node, StarNode) or isinstance(node, PowerNode)):
+                or isinstance(node, StarNode) or isinstance(node, PowerNode) or isinstance(node, ModNode)):
             return NumberType()
 
         if (isinstance(node, EqualNode) or isinstance(node, DifferentNode) or isinstance(node, LessNode)

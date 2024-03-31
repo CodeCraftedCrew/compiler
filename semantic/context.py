@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from semantic.types import Type, Method, NumberType, StringType, BooleanType, ObjectType
+from semantic.types import Type, Method, NumberType, StringType, BooleanType, ObjectType, IterableType
 
 
 class Context:
@@ -40,6 +40,22 @@ class Context:
             method.return_type = return_type
         except StopIteration:
             return False, f'Method "{name}" is not defined.'
+
+    def define_built_in_methods(self):
+
+        global_functions = {
+            "sqrt": (["value"], [NumberType()], NumberType()),
+            "sin": (["angle"], [NumberType()], NumberType()),
+            "cos": (["angle"], [NumberType()], NumberType()),
+            "log": (["base", "value"], [NumberType(), NumberType()], NumberType()),
+            "exp": (["value"], [NumberType()], NumberType()),
+            "rand": ([], [], NumberType()),
+            "print": (["message"], [StringType()], NumberType()),
+            "range": (["min", "max"], [NumberType(), NumberType()], IterableType(NumberType()))
+        }
+
+        for func_name, (param_names, param_types, return_type) in global_functions.items():
+            self.define_method(func_name, param_names, param_types, return_type)
 
     def all_methods(self, clean=True):
         plain = OrderedDict()

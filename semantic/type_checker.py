@@ -27,8 +27,12 @@ class TypeChecker:
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode):
 
+        scope = Scope()
+
         for statement in node.statements:
-            self.visit(statement)
+            self.visit(statement, scope.create_child_scope())
+
+        self.visit(node.global_expression, scope.create_child_scope())
 
     @visitor.when(TypeDeclarationNode)
     def visit(self, declaration: TypeDeclarationNode, scope: Scope):
@@ -120,7 +124,7 @@ class TypeChecker:
             if not variable.inferred_type.conforms_to(declared_type):
                 self.error(f"Inferred type does not conform to declared type for variable {variable.id}"
                            + f" of function {self.current_method.name}" if self.current_method else ""
-                           + f" of type {self.current_type.name}" if self.current_type else "")
+                                                                                                    + f" of type {self.current_type.name}" if self.current_type else "")
 
     @visitor.when(DestructiveAssignNode)
     def visit(self, assign: DestructiveAssignNode, scope: Scope):
@@ -134,33 +138,38 @@ class TypeChecker:
         self.visit(assign.expr, scope)
 
         if not assign.inferred_type.conforms_to(variable.type):
-            self.error(f"Inferred type for destructive assignment does not conform to declared type for variable {variable.id}"
-                       + f" of function {self.current_method.name}" if self.current_method else ""
-                       + f" of type {self.current_type.name}" if self.current_type else "")
+            self.error(
+                f"Inferred type for destructive assignment does not conform to declared type for variable {variable.id}"
+                + f" of function {self.current_method.name}" if self.current_method else ""
+                                                                                         + f" of type {self.current_type.name}" if self.current_type else "")
 
     @visitor.when(CallNode)
     def visit(self, call: CallNode, scope: Scope):
 
         if call.obj is None:
-            success, method = self.context.get_method(call.id)
+            success, method = self.context.get_method(call.token.lex)
         else:
             self.visit(call.obj, scope)
-            obj_type = call.inferred_type
-            success, method = obj_type.get_method(call.id)
+            obj_type = call.obj.inferred_type
+            success, method = obj_type.get_method(call.token.lex)
 
         if not success:
-            self.error(method)
+            self.error(method, token=call.token)
             return
 
-        param_types = [self.visit(param, scope) for param in call.params]
+        param_types = call.params_inferred_type
 
         if len(param_types) != len(method.param_types):
             self.error(message=f"{method.name} expects {len(method.param_types)} parameters, got {len(param_types)}")
 
         for i in range(len(method.param_types)):
-            if isinstance(method.param_types[i], UnknownType) or isinstance(param_types[i], UnknownType):
+            if isinstance(method.param_types[i], UnknownType):
                 continue
-            if method.param_types[i].name != param_types[i].name:
+
+            if isinstance(param_types[i], UnknownType):
+                self.error(message=f"Type for parameter {i} could not be inferred")
+
+            if not param_types[i].conforms_to(method.param_types[i]):
                 self.error(f"Parameter type mismatch, on {method.param_names[i]} got {param_types[i].name} "
                            f"expected {method.param_types[i].name}")
 
@@ -208,7 +217,6 @@ class TypeChecker:
         for expression in block.body:
             self.visit(expression, scope)
 
-
     @visitor.when(LetNode)
     def visit(self, node: LetNode, scope: Scope):
 
@@ -220,7 +228,6 @@ class TypeChecker:
             new_scope = Scope(new_scope)
 
         self.visit(node.body, new_scope)
-
 
     @visitor.when(InstantiateNode)
     def visit(self, node: InstantiateNode, scope: Scope):
@@ -234,25 +241,37 @@ class TypeChecker:
 
         self.visit(node.left, scope)
 
-        if isinstance(node, AsNode):
-            return
+        if isinstance(node, AsNode) or isinstance(node, IsNode):
 
-        inferred_type_right = self.visit(node.right, scope)
-        node.right.inferred_type = inferred_type_right
+            if not isinstance(node.right, str):
+                self.error(f"Operator can only be used with Types and Protocols")
+            else:
+                success, declared_type = self.context.get_type(node.right)
+
+                if not success:
+                    self.error(f"Invalid type {node.right}")
+
+        self.visit(node.right, scope)
 
         if (isinstance(node, PlusNode) or isinstance(node, MinusNode) or isinstance(node, DivNode)
                 or isinstance(node, StarNode) or isinstance(node, PowerNode)):
-            return NumberType()
+            if not isinstance(node.left.inferred_type, NumberType) or not isinstance(node.right.inferred_type, NumberType):
+                self.error(f"Operator can only be applied to numbers")
 
-        if (isinstance(node, EqualNode) or isinstance(node, DifferentNode) or isinstance(node, LessNode)
-                or isinstance(node, LessEqualNode) or isinstance(node, GreaterNode) or isinstance(node, OrNode)
-                or isinstance(node, GreaterEqualNode) or isinstance(node, IsNode) or isinstance(node, AndNode)):
-            return BooleanType()
+        elif (isinstance(node, LessNode) or isinstance(node, LessEqualNode) or isinstance(node, GreaterNode)
+             or isinstance(node, GreaterEqualNode)):
 
-        if isinstance(node, ConcatNode):
-            return StringType()
+            if not isinstance(node.left.inferred_type, NumberType) or not isinstance(node.right.inferred_type, NumberType):
+                self.error(f"Operator can only be applied to numbers")
 
-        return UndefinedType()
+        elif isinstance(node, OrNode) or isinstance(node, AndNode):
+            if not isinstance(node.left.inferred_type, BooleanType) or not isinstance(node.right.inferred_type, BooleanType):
+                self.error(f"Operator can only be applied to boolean")
+
+        elif isinstance(node, ConcatNode):
+            if not node.left.inferred_type.conforms_to(StringType()) or node.right.inferred_type.conforms_to(StringType()):
+                self.error(f"Operator can only be applied to string or number")
+
 
     @visitor.when(NotNode)
     def visit(self, node: NotNode, scope: Scope):

@@ -76,6 +76,18 @@ class Type:
             else:
                 return success, value
 
+    def get_base(self, name: str):
+        parent = self.parent
+        while parent:
+
+            success, value = parent.get_method(name)
+            if success:
+                return value
+
+            parent = parent.parent
+
+        return None
+
     def define_method(self, name: str, param_names: list, param_types: list, return_type):
         if name in (method.name for method in self.methods):
             return False, f'Method "{name}" already defined in {self.name}'
@@ -169,6 +181,7 @@ class Method:
         self.param_names = param_names
         self.param_types = params_types
         self.return_type = return_type
+        self.inferred_type = UnknownType()
 
     def __str__(self):
         params = ', '.join(f'{n}:{t.name}' for n, t in zip(self.param_names, self.param_types))
@@ -215,6 +228,9 @@ class ObjectType(Type):
     def __eq__(self, other):
         return other.name == self.name or isinstance(other, ObjectType)
 
+    def conforms_to(self, other):
+        return isinstance(other, ObjectType)
+
 
 class NumberType(Type):
     def __init__(self):
@@ -222,6 +238,9 @@ class NumberType(Type):
 
     def __eq__(self, other):
         return other.name == self.name or isinstance(other, NumberType)
+
+    def conforms_to(self, other):
+        return isinstance(other, NumberType) or isinstance(other, StringType) or isinstance(other, ObjectType)
 
 
 class StringType(Type):
@@ -231,6 +250,9 @@ class StringType(Type):
     def __eq__(self, other):
         return other.name == self.name or isinstance(other, StringType)
 
+    def conforms_to(self, other):
+        return isinstance(other, StringType) or isinstance(other, ObjectType)
+
 
 class BooleanType(Type):
     def __init__(self):
@@ -238,6 +260,9 @@ class BooleanType(Type):
 
     def __eq__(self, other):
         return other.name == self.name or isinstance(other, BooleanType)
+
+    def conforms_to(self, other):
+        return isinstance(other, BooleanType) or isinstance(other, ObjectType)
 
 
 class NullType(Type):
@@ -247,11 +272,17 @@ class NullType(Type):
     def __eq__(self, other):
         return other.name == self.name or isinstance(other, NullType)
 
+    def conforms_to(self, other):
+        return False
+
 
 class IterableType(Type):
     def __init__(self, value_type):
         Type.__init__(self, "iterable")
         self.value_type = value_type
+
+    def conforms_to(self, other):
+        return isinstance(other, IterableType) and other.value_type.conforms_to(self.value_type)
 
 
 class UndefinedType(Type):
@@ -261,6 +292,9 @@ class UndefinedType(Type):
     def __eq__(self, other):
         return other.name == self.name or isinstance(other, UndefinedType)
 
+    def conforms_to(self, other):
+        return True
+
 
 class UnknownType(Type):
     def __init__(self):
@@ -268,3 +302,6 @@ class UnknownType(Type):
 
     def __eq__(self, other):
         return other.name == self.name or isinstance(other, UnknownType)
+
+    def conforms_to(self, other):
+        return True

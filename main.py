@@ -11,6 +11,7 @@ from lexer.regex import get_regex_parser
 from lexer.tools import TokenType
 from parser.lr1 import LR1Parser
 from semantic.type_builder import TypeBuilder
+from semantic.type_checker import TypeChecker
 from semantic.type_collector import TypeCollector
 from semantic.type_inference import TypeInference
 
@@ -38,16 +39,21 @@ def main():
 
     parser = LR1Parser(grammar, src_path / 'cache/hulk')
 
-    for i in range(2, 45):
+    for i in range(7, 45):
         with open(src_path / f'test/{i}.hulk', 'r') as f:
             program = f.read()
 
-        tokens = lexer(program)
-        terminals = [mapping.get(token.token_type) for token in tokens]
+        try:
+            tokens = lexer(program)
+            terminals = [mapping.get(token.token_type) for token in tokens]
 
-        parsed, operations = parser(terminals)
+            parsed, operations = parser(terminals)
 
-        ast = evaluate_reverse_parse(parsed, operations, tokens[:-1] + [grammar.EOF])
+            ast = evaluate_reverse_parse(parsed, operations, tokens[:-1] + [grammar.EOF])
+
+        except Exception as e:
+            print(e)
+            continue
 
         error = Error(program)
 
@@ -60,10 +66,14 @@ def main():
         inference = TypeInference(builder.context, error)
         inference.visit(ast)
 
+        checker = TypeChecker(builder.context, error)
+        checker.visit(ast)
+
+        if error.errors:
+            continue
+
         print(f"finish {i}")
 
-        # checker = TypeChecker(error)
-        # checker.visit(self)
 
 
 
