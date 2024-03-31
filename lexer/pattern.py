@@ -43,7 +43,7 @@ def get_patterns():
         TokenPattern(r"as", TokenType.AS),
         TokenPattern(r"protocol", TokenType.PROTOCOL),
         TokenPattern(r"extends", TokenType.EXTENDS),
-        TokenPattern(f"(0|{nonzero_digits})(0|{nonzero_digits})*", TokenType.NUMBER),
+        TokenPattern(f"(0|{nonzero_digits})+(.)?(0|{nonzero_digits})*", TokenType.NUMBER),
         TokenPattern("\"([^\"]*)\"", TokenType.STRING),
         TokenPattern(f"({letters})({letters}|0|_|{nonzero_digits})*", TokenType.IDENTIFIER),
         TokenPattern(r"\+", TokenType.PLUS),

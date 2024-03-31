@@ -80,7 +80,10 @@ class VariableDeclarationNode(ExpressionNode):
         self.id = idx
         self.type = declared_type
         self.expr = expr
-
+        
+class VariableNode(ExpressionNode):
+    def __init__(self, idx: Token):
+        self.id = idx
 
 class DestructiveAssignNode(ExpressionNode):
     def __init__(self, idx: str, expr: ExpressionNode):

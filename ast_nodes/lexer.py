@@ -3,7 +3,7 @@ import string
 from ast_nodes.ast import AtomicNode, BinaryNode, EpsilonNode, UnaryNode
 from ast_nodes.tools import get_character_automaton
 from automaton.automaton import State
-from automaton.operations import closure, concat, join, repeat
+from automaton.operations import closure, concat, join, repeat, positive_closure
 
 
 class SymbolNode(AtomicNode):
@@ -56,7 +56,7 @@ class QuestionNode(UnaryNode):
 class PlusNode(UnaryNode):
 
     def operate(self, value: State):
-        return concat([value, closure(value)])
+        return positive_closure(value)
 
 
 class ClosureNode(UnaryNode):

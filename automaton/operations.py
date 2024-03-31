@@ -38,8 +38,18 @@ def closure(state):
     return start_state
 
 
-def repeat(state, min_param, max_param):
+def positive_closure(state):
+    start_state = State(frozenset())
+    start_state.add_epsilon_transition(state)
 
+    final_state = State(frozenset(), True)
+
+    modify_final_state([state], [state, final_state])
+
+    return start_state
+
+
+def repeat(state, min_param, max_param):
     assert min_param <= max_param, "min_param must be less than max_param in repeat operation"
 
     if max_param == 0:
@@ -81,7 +91,6 @@ def modify_final_state(states, final_states):
 
 
 def get_final_states(state):
-
     pending = [state]
     visited = {state}
     finals = []

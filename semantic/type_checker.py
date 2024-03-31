@@ -243,7 +243,7 @@ class TypeChecker:
 
         if isinstance(node, AsNode) or isinstance(node, IsNode):
 
-            if not isinstance(node.right, str):
+            if node.right:
                 self.error(f"Operator can only be used with Types and Protocols")
             else:
                 success, declared_type = self.context.get_type(node.right)
