@@ -4,12 +4,12 @@ from automaton.automaton import State
 
 
 def join(states):
-    initial_state = State(0)
+    initial_state = State(frozenset())
 
     for state in states:
         initial_state.add_epsilon_transition(state)
 
-    final_state = State(0, True)
+    final_state = State(frozenset(), True)
 
     modify_final_state(states, [final_state])
 
@@ -17,7 +17,7 @@ def join(states):
 
 
 def concat(states):
-    final_state = State(0, True)
+    final_state = State(frozenset(), True)
     for i in range(len(states) - 1):
         modify_final_state([states[i]], [states[i + 1]])
     modify_final_state([states[-1]], [final_state])
@@ -26,10 +26,10 @@ def concat(states):
 
 
 def closure(state):
-    start_state = State(0)
+    start_state = State(frozenset())
     start_state.add_epsilon_transition(state)
 
-    final_state = State(0, True)
+    final_state = State(frozenset(), True)
 
     modify_final_state([state], [state, final_state])
 
@@ -49,7 +49,7 @@ def repeat(state, min_param, max_param):
 
         return new_state
 
-    final_state = State(0, True)
+    final_state = State(frozenset(), True)
     states = [copy.deepcopy(state) for _ in range(max_param)]
 
     for i in range(len(states) - 1):
