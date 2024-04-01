@@ -4,8 +4,9 @@ from semantic.types import UnknownType, NumberType, StringType, IterableType
 
 
 class VariableInfo:
-    def __init__(self, name, declared_type=None, inferred_type=None):
+    def __init__(self, name, declared_type=None, inferred_type=None, value=None):
         self.name = name
+        self.value = value
         self.type = declared_type
         self.inferred_type = inferred_type or UnknownType()
 
@@ -41,8 +42,8 @@ class Scope:
         self.children.append(child_scope)
         return child_scope
 
-    def define_variable(self, variable_name, declared_type=None, inferred_type=None):
-        self.local_vars.append(VariableInfo(variable_name, declared_type, inferred_type))
+    def define_variable(self, variable_name, declared_type=None, inferred_type=None, value=None):
+        self.local_vars.append(VariableInfo(variable_name, declared_type, inferred_type, value))
 
     def update_variable_inferred_type(self, variable_name, inferred_type):
         variable = self.find_variable(variable_name)
