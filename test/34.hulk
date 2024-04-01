@@ -17,5 +17,7 @@ type Polar(phi, rho) inherits Point(rho * sin(phi), rho * cos(phi)) {
     rho() => sqrt(self.getX() ^ 2 + self.getY() ^ 2);
 }
 
-let pt = new Point(3,4) in
+let pt = new Point(3,4) in {
+    new Polar(1,2);
     print("x: " @ pt.getX() @ "; y: " @ pt.getY());
+}

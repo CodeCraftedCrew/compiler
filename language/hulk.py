@@ -2,7 +2,7 @@ from ast_nodes.hulk import LiteralNode, PlusNode, MinusNode, ConcatNode, LessNod
     GreaterEqualNode, IsNode, AsNode, EqualNode, DifferentNode, StarNode, DivNode, PowerNode, NotNode, ElIfNode, IfNode, \
     WhileNode, OrNode, AndNode, ForNode, VariableDeclarationNode, CallNode, InstantiateNode, FunctionDeclarationNode, \
     InheritsNode, AttributeDeclarationNode, ProtocolDeclarationNode, ParameterDeclarationNode, TypeDeclarationNode, \
-    DestructiveAssignNode, LetNode, BlockNode, ProgramNode, VectorNode, IndexNode, ModNode
+    DestructiveAssignNode, LetNode, BlockNode, ProgramNode, VectorNode, IndexNode, ModNode, VariableNode
 from grammar.grammar import Grammar
 from lexer.tools import TokenType
 
@@ -148,12 +148,13 @@ def get_hulk_grammar():
     )
 
     program %= head_program + statement, lambda h, s: ProgramNode(s[1], s[2])
+    program %= head_program, lambda h, s: ProgramNode(s[1], [])
     program %= statement, lambda h, s: ProgramNode([], s[1])
 
     head_program %= define_statement, lambda h, s: [s[1]]
     head_program %= head_program + define_statement, lambda h, s: s[1] + [s[2]]
 
-    define_statement %= function_definition, lambda h, s: s[1]
+    define_statement %= function + function_definition, lambda h, s: s[2]
     define_statement %= type_definition, lambda h, s: s[1]
     define_statement %= protocol_definition, lambda h, s: s[1]
 
@@ -166,10 +167,10 @@ def get_hulk_grammar():
     block %= for_statement_block, lambda h, s: s[1]
     block %= declaration_expression_block, lambda h, s: s[1]
 
-    optional_semicolon %= semicolon, lambda h, s : None
+    optional_semicolon %= semicolon, lambda h, s: None
     optional_semicolon %= epsilon, lambda h, s: None
 
-    block_body %= statement_list, lambda h, s: [s[1]]
+    block_body %= statement_list, lambda h, s: s[1]
     block_body %= epsilon, lambda h, s: []
 
     statement_list %= statement, lambda h, s: [s[1]]
@@ -182,18 +183,31 @@ def get_hulk_grammar():
     non_block %= declaration_expression, lambda h, s: s[1]
 
     if_statement %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + non_block
-                     + elif_statement + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], s[8], s[6])
+                     + elif_statement + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], s[6], s[8])
+    if_statement %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + non_block
+                     + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], [], s[7])
+    if_statement %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + block
+                     + elif_statement + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], s[6], s[8])
+    if_statement %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + block
+                     + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], [], s[7])
 
     if_statement_block %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + block
-                           + elif_statement_block + else_terminal + block), lambda h, s: IfNode(s[3], s[5], s[8], s[6])
+                           + elif_statement + else_terminal + block), lambda h, s: IfNode(s[3], s[5], s[6], s[8])
+    if_statement_block %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + block
+                           + else_terminal + block), lambda h, s: IfNode(s[3], s[5], [], s[7])
+    if_statement_block %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + non_block
+                           + elif_statement + else_terminal + block), lambda h, s: IfNode(s[3], s[5], s[6], s[8])
+    if_statement_block %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + non_block
+                           + else_terminal + block), lambda h, s: IfNode(s[3], s[5], [], s[7])
 
-    elif_statement_block %= (elif_statement + elif_terminal + open_parenthesis + or_expression + close_parenthesis
-                             + block), lambda h, s: s[1] + [ElIfNode(s[4], s[6])]
-    elif_statement_block %= epsilon, lambda h, s: []
-
+    elif_statement %= (elif_terminal + open_parenthesis + or_expression + close_parenthesis
+                       + non_block), lambda h, s: [ElIfNode(s[3], s[5])]
     elif_statement %= (elif_statement + elif_terminal + open_parenthesis + or_expression + close_parenthesis
                        + non_block), lambda h, s: s[1] + [ElIfNode(s[4], s[6])]
-    elif_statement %= epsilon, lambda h, s: []
+    elif_statement %= (elif_terminal + open_parenthesis + or_expression + close_parenthesis
+                       + block), lambda h, s: [ElIfNode(s[3], s[5])]
+    elif_statement %= (elif_statement + elif_terminal + open_parenthesis + or_expression + close_parenthesis
+                       + block), lambda h, s: s[1] + [ElIfNode(s[4], s[6])]
 
     while_statement %= (while_terminal + open_parenthesis + or_expression + close_parenthesis + non_block,
                         lambda h, s: WhileNode(s[3], s[5]))
@@ -207,10 +221,10 @@ def get_hulk_grammar():
     for_statement_block %= (for_terminal + open_parenthesis + identifier + type_declaration + in_terminal + expression
                             + close_parenthesis + block), lambda h, s: ForNode(s[3], s[4], s[6], s[8])
 
-    declaration_expression %= (let + identifier + type_declaration + assignment_terminal + expression
+    declaration_expression %= (let + identifier + type_declaration + assignment_terminal + non_block
                                + multiple_declaration + in_terminal + non_block,
                                lambda h, s: LetNode([VariableDeclarationNode(s[2], s[3], s[5])] + s[6], s[8]))
-    declaration_expression_block %= (let + identifier + type_declaration + assignment_terminal + expression
+    declaration_expression_block %= (let + identifier + type_declaration + assignment_terminal + non_block
                                      + multiple_declaration + in_terminal + block,
                                      lambda h, s: LetNode([VariableDeclarationNode(s[2], s[3], s[5])] + s[6], s[8]))
 
@@ -225,6 +239,7 @@ def get_hulk_grammar():
     expression %= or_expression, lambda h, s: s[1]
 
     assignment %= identifier + destructive_assignment + non_block, lambda h, s: DestructiveAssignNode(s[1], s[3])
+    assignment %= member_access + destructive_assignment + non_block, lambda h, s: DestructiveAssignNode(s[1], s[3])
 
     or_expression %= or_expression + or_terminal + and_expression, lambda h, s: OrNode(s[1], s[3])
     or_expression %= and_expression, lambda h, s: s[1]
@@ -233,16 +248,18 @@ def get_hulk_grammar():
     and_expression %= equality_expression, lambda h, s: s[1]
 
     equality_expression %= equality_expression + equal + relational_expression, lambda h, s: EqualNode(s[1], s[3])
-    equality_expression %= equality_expression + different + relational_expression, lambda h, s: DifferentNode(s[1], s[3])
+    equality_expression %= equality_expression + different + relational_expression, lambda h, s: DifferentNode(s[1],
+                                                                                                               s[3])
     equality_expression %= relational_expression, lambda h, s: s[1]
 
     relational_expression %= mod_expression, lambda h, s: s[1]
     relational_expression %= relational_expression + less + mod_expression, lambda h, s: LessNode(s[1], s[3])
     relational_expression %= relational_expression + less_equal + mod_expression, lambda h, s: LessEqualNode(s[1], s[3])
     relational_expression %= relational_expression + greater + mod_expression, lambda h, s: GreaterNode(s[1], s[3])
-    relational_expression %= relational_expression + greater_equal + mod_expression, lambda h, s: GreaterEqualNode(s[1], s[3])
-    relational_expression %= mod_expression + is_terminal + identifier, lambda h, s: IsNode(s[1], s[3])
-    relational_expression %= mod_expression + as_terminal + identifier, lambda h, s: AsNode(s[1], s[3])
+    relational_expression %= relational_expression + greater_equal + mod_expression, lambda h, s: GreaterEqualNode(s[1],
+                                                                                                                   s[3])
+    relational_expression %= relational_expression + is_terminal + identifier, lambda h, s: IsNode(s[1], s[3])
+    relational_expression %= relational_expression + as_terminal + identifier, lambda h, s: AsNode(s[1], s[3])
 
     mod_expression %= mod_expression + mod + add_expression, lambda h, s: ModNode(s[1], s[3])
     mod_expression %= add_expression, lambda h, s: s[1]
@@ -267,8 +284,8 @@ def get_hulk_grammar():
     unary_expression %= primary_expression, lambda h, s: s[1]
 
     primary_expression %= literal, lambda h, s: s[1]
-    primary_expression %= invocation_expression, lambda h, s: s[1]
-    primary_expression %= identifier, lambda h, s: s[1]
+    primary_expression %= invocation_expression, lambda h, s: CallNode(None, s[1][0], s[1][1])
+    primary_expression %= identifier, lambda h, s: VariableNode(s[1])
     primary_expression %= vector, lambda h, s: s[1]
     primary_expression %= index, lambda h, s: s[1]
     primary_expression %= member_access, lambda h, s: s[1]
@@ -288,7 +305,7 @@ def get_hulk_grammar():
     argument_list %= argument_list + comma + non_block, lambda h, s: s[1] + [s[3]]
     argument_list %= non_block, lambda h, s: [s[1]]
 
-    vector %= open_bracket + vector_element + close_bracket, lambda h, s: VectorNode(s[1])
+    vector %= open_bracket + vector_element + close_bracket, lambda h, s: VectorNode(s[2])
     vector %= (open_bracket + non_block + double_pipe + identifier + in_terminal + non_block
                + close_bracket, lambda h, s: VectorNode([], s[2], s[4], s[6]))
 
@@ -302,11 +319,11 @@ def get_hulk_grammar():
 
     instantiation %= new + invocation_expression, lambda h, s: InstantiateNode(s[2][0], s[2][1])
 
-    function_definition %= (function + identifier + open_parenthesis + arguments_definition + close_parenthesis +
-                            type_declaration + inline + non_block + semicolon,
-                            lambda h, s: FunctionDeclarationNode(s[2], s[4], s[6], s[8]))
-    function_definition %= (function + identifier + open_parenthesis + arguments_definition + close_parenthesis +
-                            type_declaration + block, lambda h, s: FunctionDeclarationNode(s[2], s[4], s[6], s[7]))
+    function_definition %= (identifier + open_parenthesis + arguments_definition + close_parenthesis +
+                            type_declaration + inline + statement,
+                            lambda h, s: FunctionDeclarationNode(s[1], s[3], s[5], s[7]))
+    function_definition %= (identifier + open_parenthesis + arguments_definition + close_parenthesis +
+                            type_declaration + block, lambda h, s: FunctionDeclarationNode(s[1], s[3], s[5], s[6]))
 
     arguments_definition %= argument_list_definition, lambda h, s: s[1]
     arguments_definition %= epsilon, lambda h, s: []
@@ -319,8 +336,10 @@ def get_hulk_grammar():
     type_definition %= (type_terminal + identifier + type_arguments + type_inherits + open_brace + type_body
                         + close_brace + optional_semicolon,
                         lambda h, s: TypeDeclarationNode(idx=s[2], params=s[3],
-                                                         attributes=[definition for definition in s[6] if isinstance(definition, AttributeDeclarationNode)],
-                                                         methods=[definition for definition in s[6] if isinstance(definition, FunctionDeclarationNode)],
+                                                         attributes=[definition for definition in s[6] if
+                                                                     isinstance(definition, AttributeDeclarationNode)],
+                                                         methods=[definition for definition in s[6] if
+                                                                  isinstance(definition, FunctionDeclarationNode)],
                                                          inherits=s[4]))
 
     type_arguments %= open_parenthesis + arguments_definition + close_parenthesis, lambda h, s: s[2]

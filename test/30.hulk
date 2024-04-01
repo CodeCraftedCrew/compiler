@@ -1,5 +1,7 @@
-gcd(a, b) => while (a > 0)
+function gcd(a, b) => while (a > 0)
     let m = a % b in {
         b := a;
         a := m;
     };
+
+print(gcd(200,2));

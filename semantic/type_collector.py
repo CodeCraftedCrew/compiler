@@ -17,6 +17,7 @@ class TypeCollector:
     @visitor.when(ProgramNode)
     def visit(self, node: ProgramNode):
         self.context = Context()
+        self.context.define_built_in_methods()
 
         for type_definition in [node for node in node.statements if isinstance(node, TypeDeclarationNode)]:
             self.visit(type_definition)
@@ -26,12 +27,12 @@ class TypeCollector:
 
     @visitor.when(TypeDeclarationNode)
     def visit(self, declaration: TypeDeclarationNode):
-        success, value = self.context.create_type(declaration.id)
+        success, value = self.context.create_type(declaration.id.lex)
         if not success:
-            self.error(message=value)
+            self.error(message=value, line=declaration.id.line)
 
     @visitor.when(ProtocolDeclarationNode)
     def visit(self, declaration: ProtocolDeclarationNode):
-        success, value = self.context.create_type(declaration.id, is_protocol=True)
+        success, value = self.context.create_type(declaration.id.lex, is_protocol=True)
         if not success:
-            self.error(message=value)
+            self.error(message=value, line=declaration.id.line)

@@ -1,4 +1,5 @@
 from ast_nodes.ast import Node, AtomicNode, BinaryNode
+from lexer.tools import Token
 from semantic.types import UnknownType
 
 
@@ -15,18 +16,18 @@ class DeclarationNode(Node):
 
 class ExpressionNode(Node):
     def __init__(self):
-        self.inferred_type = None
+        self.inferred_type = UnknownType()
 
 
 class ParameterDeclarationNode(DeclarationNode):
-    def __init__(self, idx: str, declared_type: str):
+    def __init__(self, idx: Token, declared_type: Token):
         self.id = idx
         self.type = declared_type
         self.inferred_type = UnknownType()
 
 
 class AttributeDeclarationNode(DeclarationNode):
-    def __init__(self, idx: str, declared_type: str, expr: ExpressionNode):
+    def __init__(self, idx: Token, declared_type: Token, expr: ExpressionNode):
         self.id = idx
         self.type = declared_type
         self.expression = expr
@@ -34,9 +35,8 @@ class AttributeDeclarationNode(DeclarationNode):
 
 
 class FunctionDeclarationNode(DeclarationNode):
-    def __init__(self, idx: str, params: list[ParameterDeclarationNode], return_type: str,
+    def __init__(self, idx: Token, params: list[ParameterDeclarationNode], return_type: Token,
                  body: ExpressionNode = None):
-
         self.id = idx
         self.params = params
         self.type = return_type
@@ -48,15 +48,17 @@ class FunctionDeclarationNode(DeclarationNode):
 
     def is_extended(self):
         return isinstance(self.body, BlockNode)
-    
+
+
 class InheritsNode(DeclarationNode):
-    def __init__(self, idx: str, arguments: list[ExpressionNode]):
+    def __init__(self, idx: Token, arguments: list[ExpressionNode]):
         self.id = idx
         self.arguments = arguments
+        self.args_inferred_types = []
 
 
 class TypeDeclarationNode(DeclarationNode):
-    def __init__(self, idx: str, params: list[ParameterDeclarationNode],
+    def __init__(self, idx: Token, params: list[ParameterDeclarationNode],
                  attributes: list[AttributeDeclarationNode], methods: list[FunctionDeclarationNode],
                  inherits: InheritsNode = None):
         self.id = idx
@@ -64,38 +66,45 @@ class TypeDeclarationNode(DeclarationNode):
         self.inherits = inherits
         self.attributes = attributes or []
         self.methods = methods or []
-        
+
 
 class ProtocolDeclarationNode(DeclarationNode):
-    def __init__(self, idx: str, methods: list[FunctionDeclarationNode], extends: list[str] = None):
+    def __init__(self, idx: Token, methods: list[FunctionDeclarationNode], extends: list[str] = None):
         self.id = idx
         self.extends = extends
         self.methods = methods or []
 
 
 class VariableDeclarationNode(ExpressionNode):
-    def __init__(self, idx: str, declared_type: str, expr: ExpressionNode):
+    def __init__(self, idx: Token, declared_type: Token, expr: ExpressionNode):
         super().__init__()
         self.id = idx
         self.type = declared_type
         self.expr = expr
 
 
+class VariableNode(ExpressionNode):
+    def __init__(self, idx: Token):
+        super().__init__()
+        self.id = idx
+
+
 class DestructiveAssignNode(ExpressionNode):
-    def __init__(self, idx: str, expr: ExpressionNode):
+    def __init__(self, idx: Token, expr: ExpressionNode):
         super().__init__()
         self.id = idx
         self.expr = expr
 
 
 class CallNode(ExpressionNode):
-    def __init__(self, obj: ExpressionNode, idx: str, params: list[ParameterDeclarationNode],
+    def __init__(self, obj: ExpressionNode, token: Token, params: list[ParameterDeclarationNode],
                  is_attribute=False):
         super().__init__()
         self.obj = obj
-        self.id = idx
+        self.token = token
         self.params = params
         self.is_attribute = is_attribute
+        self.params_inferred_type = []
 
 
 class ElIfNode(ExpressionNode):
@@ -116,12 +125,13 @@ class IfNode(ExpressionNode):
 
 
 class ForNode(ExpressionNode):
-    def __init__(self, item_idx: str, declared_type: str, iterable: ExpressionNode, body: ExpressionNode):
+    def __init__(self, item_idx: Token, declared_type: Token, iterable: ExpressionNode, body: ExpressionNode):
         super().__init__()
         self.item_id = item_idx
         self.item_declared_type = declared_type
         self.iterable = iterable
         self.body = body
+        self.item_inferred_type = UnknownType()
 
 
 class WhileNode(ExpressionNode):
@@ -146,20 +156,22 @@ class LetNode(ExpressionNode):
 
 
 class InstantiateNode(ExpressionNode):
-    def __init__(self, idx: str, params: list[ExpressionNode]):
+    def __init__(self, idx: Token, params: list[ExpressionNode]):
         super().__init__()
         self.idx = idx
         self.params = params
-        
-        
+        self.params_inferred_type = []
+
+
 class VectorNode(ExpressionNode):
-    def __init__(self, elements: list[ExpressionNode], generator: ExpressionNode = None, item: str= None, iterator: ExpressionNode= None):
+    def __init__(self, elements: list[ExpressionNode], generator: ExpressionNode = None, item: str = None,
+                 iterator: ExpressionNode = None):
         self.elements = elements
         self.generator = generator
         self.item = item
         self.iterator = iterator
-        
-        
+
+
 class IndexNode(ExpressionNode):
     def __init__(self, obj: ExpressionNode, index: ExpressionNode):
         self.obj = obj
@@ -240,10 +252,6 @@ class NotNode(ExpressionNode):
     def __init__(self, exp: ExpressionNode):
         super().__init__()
         self.expression = exp
-
-
-class VariableNode(AtomicNode):
-    pass
 
 
 class LiteralNode(AtomicNode):

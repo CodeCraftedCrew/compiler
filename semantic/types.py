@@ -5,10 +5,12 @@ class Type:
     def __init__(self, name: str, is_protocol=False):
         self.name = name
         self.params = {}
+        self.params_inferred_type = []
         self.is_protocol = is_protocol
         self.attributes = []
         self.methods = []
         self.parent = None
+        self.depth = -1
 
     def set_parent(self, parent):
         if isinstance(parent, StringType) or isinstance(parent, NumberType) or isinstance(parent, BooleanType):
@@ -19,6 +21,7 @@ class Type:
         if self.parent is not None:
             return False, f'Parent type is already set for {self.name}.'
         self.parent = parent
+        self.depth = parent.depth + 1
         return True, None
 
     def get_attribute(self, name: str):
@@ -76,11 +79,23 @@ class Type:
             else:
                 return success, value
 
-    def define_method(self, name: str, param_names: list, param_types: list, return_type):
+    def get_base(self, name: str):
+        parent = self.parent
+        while parent:
+
+            success, value = parent.get_method(name)
+            if success:
+                return True, value
+
+            parent = parent.parent
+
+        return False, f'Method "{name}" is not defined in {self.name}.'
+
+    def define_method(self, name: str, param_names: list, param_types: list, return_type, line):
         if name in (method.name for method in self.methods):
             return False, f'Method "{name}" already defined in {self.name}'
 
-        method = Method(name, param_names, param_types, return_type)
+        method = Method(name, param_names, param_types, return_type, line)
         self.methods.append(method)
         return True, method
 
@@ -155,6 +170,7 @@ class Attribute:
     def __init__(self, name, typex):
         self.name = name
         self.type = typex
+        self.inferred_type = UnknownType()
 
     def __str__(self):
         return f'[attrib] {self.name}' + ' : {self.type.name}' if self.type is not None else '' + ';'
@@ -164,18 +180,20 @@ class Attribute:
 
 
 class Method:
-    def __init__(self, name, param_names, params_types, return_type):
+    def __init__(self, name, param_names, params_types, return_type, line):
         self.name = name
         self.param_names = param_names
         self.param_types = params_types
         self.return_type = return_type
+        self.line = line
+        self.inferred_type = UnknownType()
 
     def __str__(self):
         params = ', '.join(f'{n}:{t.name}' for n, t in zip(self.param_names, self.param_types))
         return f'[method] {self.name}({params}): {self.return_type.name};'
 
     def __eq__(self, other):
-        return other.name == self.name and \
+        return other and other.name == self.name and \
             other.return_type == self.return_type and \
             other.param_types == self.param_types
 
@@ -191,7 +209,7 @@ class ErrorType(Type):
         return True
 
     def __eq__(self, other):
-        return isinstance(other, Type)
+        return other and isinstance(other, Type)
 
 
 class VoidType(Type):
@@ -205,66 +223,103 @@ class VoidType(Type):
         return True
 
     def __eq__(self, other):
-        return isinstance(other, VoidType)
+        return other and isinstance(other, VoidType)
 
 
 class ObjectType(Type):
     def __init__(self):
-        Type.__init__(self, 'object')
+        Type.__init__(self, 'Object')
+        self.depth = 0
 
     def __eq__(self, other):
-        return other.name == self.name or isinstance(other, ObjectType)
+        return other and other.name == self.name or isinstance(other, ObjectType)
+
+    def conforms_to(self, other):
+        return isinstance(other, ObjectType)
 
 
 class NumberType(Type):
     def __init__(self):
-        Type.__init__(self, 'number')
+        Type.__init__(self, 'Number')
+        self.depth = 1
+        self.parent = ObjectType()
 
     def __eq__(self, other):
-        return other.name == self.name or isinstance(other, NumberType)
+        return other and other.name == self.name or isinstance(other, NumberType)
+
+    def conforms_to(self, other):
+        return isinstance(other, NumberType) or isinstance(other, StringType) or isinstance(other, ObjectType)
 
 
 class StringType(Type):
     def __init__(self):
-        Type.__init__(self, 'string')
+        Type.__init__(self, 'String')
+        self.depth = 1
+        self.parent = ObjectType()
 
     def __eq__(self, other):
-        return other.name == self.name or isinstance(other, StringType)
+        return other and other.name == self.name or isinstance(other, StringType)
+
+    def conforms_to(self, other):
+        return isinstance(other, StringType) or isinstance(other, ObjectType)
 
 
 class BooleanType(Type):
     def __init__(self):
-        Type.__init__(self, 'boolean')
+        Type.__init__(self, 'Boolean')
+        self.depth = 1
+        self.parent = ObjectType()
 
     def __eq__(self, other):
-        return other.name == self.name or isinstance(other, BooleanType)
+        return other and other.name == self.name or isinstance(other, BooleanType)
+
+    def conforms_to(self, other):
+        return isinstance(other, BooleanType) or isinstance(other, ObjectType)
 
 
 class NullType(Type):
     def __init__(self):
-        Type.__init__(self, 'null')
+        Type.__init__(self, '<null>')
 
     def __eq__(self, other):
-        return other.name == self.name or isinstance(other, NullType)
+        return other and other.name == self.name or isinstance(other, NullType)
+
+    def conforms_to(self, other):
+        return False
 
 
 class IterableType(Type):
     def __init__(self, value_type):
-        Type.__init__(self, "iterable")
+        Type.__init__(self, "Iterable")
         self.value_type = value_type
+        self.methods = [Method("current", [], [], self.value_type, -1),
+                        Method("next", [], [], BooleanType(), -1)]
+
+    def conforms_to(self, other):
+        return (isinstance(other, ObjectType) or
+                (isinstance(other, IterableType) and other.value_type.conforms_to(self.value_type)))
+
+    def __str__(self):
+        return f"Iterable<{self.value_type.name}>"
 
 
 class UndefinedType(Type):
     def __init__(self):
-        Type.__init__(self, 'undefined')
+        Type.__init__(self, '<undefined>')
 
     def __eq__(self, other):
-        return other.name == self.name or isinstance(other, UndefinedType)
+        return other and other.name == self.name or isinstance(other, UndefinedType)
+
+    def conforms_to(self, other):
+        return True
 
 
 class UnknownType(Type):
     def __init__(self):
-        Type.__init__(self, 'unknown')
+        Type.__init__(self, '<unknown>')
 
     def __eq__(self, other):
-        return other.name == self.name or isinstance(other, UnknownType)
+        return other and other.name == self.name or isinstance(other, UnknownType)
+
+    def conforms_to(self, other):
+        return True

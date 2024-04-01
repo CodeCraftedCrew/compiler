@@ -70,7 +70,7 @@ class LRParser(Parser):
             try:
                 action, tag = self.action[state, lookahead.Name]
             except KeyError as k:
-                raise KeyError
+                raise Exception(f"Unexpected token {lookahead.Name}")
 
             match action:
                 case Action.SHIFT:

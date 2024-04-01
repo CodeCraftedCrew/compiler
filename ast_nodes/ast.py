@@ -1,4 +1,5 @@
 from automaton.automaton import State
+from semantic.types import UnknownType
 from visitor import visitor
 
 
@@ -10,11 +11,13 @@ class Node:
 class AtomicNode(Node):
     def __init__(self, lex):
         self.lex = lex
+        self.inferred_type = UnknownType()
 
 
 class UnaryNode(Node):
     def __init__(self, node):
         self.node = node
+        self.inferred_type = UnknownType()
 
     def evaluate(self):
         value = self.node.evaluate()
@@ -29,6 +32,7 @@ class BinaryNode(Node):
     def __init__(self, left, right):
         self.left = left
         self.right = right
+        self.inferred_type = UnknownType()
 
     def evaluate(self):
         lvalue = self.left.evaluate()

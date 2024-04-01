@@ -16,16 +16,6 @@ class ProtocolHierarchy:
 
         return True, None
 
-    def conforms(self, type_a, type_b):
-
-        if type_a == type_b:
-            return True
-
-        if type_a in self.inheritances:
-            return self.conforms(self.inheritances[type_a], type_b)
-
-        return False
-
     def bfs_visit_order(self):
         visited_order = []
         queue = deque()
