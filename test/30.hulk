@@ -3,3 +3,5 @@ function gcd(a, b) => while (a > 0)
         b := a;
         a := m;
     };
+
+print(gcd(200,2));

@@ -148,13 +148,13 @@ def get_hulk_grammar():
     )
 
     program %= head_program + statement, lambda h, s: ProgramNode(s[1], s[2])
-    program %= head_program, lambda h, s: ProgramNode([], s[1])
+    program %= head_program, lambda h, s: ProgramNode(s[1], [])
     program %= statement, lambda h, s: ProgramNode([], s[1])
 
     head_program %= define_statement, lambda h, s: [s[1]]
     head_program %= head_program + define_statement, lambda h, s: s[1] + [s[2]]
 
-    define_statement %= function + function_definition, lambda h, s: s[1]
+    define_statement %= function + function_definition, lambda h, s: s[2]
     define_statement %= type_definition, lambda h, s: s[1]
     define_statement %= protocol_definition, lambda h, s: s[1]
 
@@ -170,7 +170,7 @@ def get_hulk_grammar():
     optional_semicolon %= semicolon, lambda h, s: None
     optional_semicolon %= epsilon, lambda h, s: None
 
-    block_body %= statement_list, lambda h, s: [s[1]]
+    block_body %= statement_list, lambda h, s: s[1]
     block_body %= epsilon, lambda h, s: []
 
     statement_list %= statement, lambda h, s: [s[1]]
@@ -183,20 +183,20 @@ def get_hulk_grammar():
     non_block %= declaration_expression, lambda h, s: s[1]
 
     if_statement %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + non_block
-                     + elif_statement + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], s[8], s[6])
+                     + elif_statement + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], s[6], s[8])
     if_statement %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + non_block
-                     + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], s[7])
+                     + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], [], s[7])
     if_statement %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + block
-                     + elif_statement + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], s[8], s[6])
+                     + elif_statement + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], s[6], s[8])
     if_statement %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + block
-                     + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], s[7])
+                     + else_terminal + non_block), lambda h, s: IfNode(s[3], s[5], [], s[7])
 
     if_statement_block %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + block
-                           + elif_statement + else_terminal + block), lambda h, s: IfNode(s[3], s[5], s[8], s[6])
+                           + elif_statement + else_terminal + block), lambda h, s: IfNode(s[3], s[5], s[6], s[8])
     if_statement_block %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + block
                            + else_terminal + block), lambda h, s: IfNode(s[3], s[5], [], s[7])
     if_statement_block %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + non_block
-                           + elif_statement + else_terminal + block), lambda h, s: IfNode(s[3], s[5], s[8], s[6])
+                           + elif_statement + else_terminal + block), lambda h, s: IfNode(s[3], s[5], s[6], s[8])
     if_statement_block %= (if_terminal + open_parenthesis + or_expression + close_parenthesis + non_block
                            + else_terminal + block), lambda h, s: IfNode(s[3], s[5], [], s[7])
 
@@ -258,8 +258,8 @@ def get_hulk_grammar():
     relational_expression %= relational_expression + greater + mod_expression, lambda h, s: GreaterNode(s[1], s[3])
     relational_expression %= relational_expression + greater_equal + mod_expression, lambda h, s: GreaterEqualNode(s[1],
                                                                                                                    s[3])
-    relational_expression %= mod_expression + is_terminal + primary_expression, lambda h, s: IsNode(s[1], s[3])
-    relational_expression %= mod_expression + as_terminal + primary_expression, lambda h, s: AsNode(s[1], s[3])
+    relational_expression %= relational_expression + is_terminal + identifier, lambda h, s: IsNode(s[1], s[3])
+    relational_expression %= relational_expression + as_terminal + identifier, lambda h, s: AsNode(s[1], s[3])
 
     mod_expression %= mod_expression + mod + add_expression, lambda h, s: ModNode(s[1], s[3])
     mod_expression %= add_expression, lambda h, s: s[1]

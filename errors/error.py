@@ -11,7 +11,7 @@ class Error:
     def print_token(self, token):
         self.print_line(token.line)
         spaces = " " * (1 + len(str(token.line)) + token.column)
-        pointer = "^" * len(token.text)
+        pointer = "^" * len(token.lex)
         print(f"{spaces}{pointer}", file=self.error_out)
 
     def print_line(self, line: int):

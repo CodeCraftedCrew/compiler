@@ -4,10 +4,10 @@ from semantic.types import UnknownType, NumberType, StringType, IterableType
 
 
 class VariableInfo:
-    def __init__(self, name, declared_type=None, inferred_types=None):
+    def __init__(self, name, declared_type=None, inferred_type=None):
         self.name = name
         self.type = declared_type
-        self.inferred_type = UnknownType()
+        self.inferred_type = inferred_type or UnknownType()
 
 
 class FunctionInfo:

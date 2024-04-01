@@ -1,14 +1,11 @@
 import argparse
-import os
 from pathlib import Path
 
 from errors.error import Error
 from evaluation.evaluation import evaluate_reverse_parse
 from language.hulk import get_hulk_grammar
 from lexer.lexer import Lexer
-from lexer.pattern import get_patterns, TokenPattern
-from lexer.regex import get_regex_parser
-from lexer.tools import TokenType
+from lexer.pattern import get_patterns
 from parser.lr1 import LR1Parser
 from semantic.type_builder import TypeBuilder
 from semantic.type_checker import TypeChecker
@@ -39,7 +36,7 @@ def main():
 
     parser = LR1Parser(grammar, src_path / 'cache/hulk')
 
-    for i in range(6, 45):
+    for i in range(1, 45):
         with open(src_path / f'test/{i}.hulk', 'r') as f:
             program = f.read()
 
@@ -73,25 +70,6 @@ def main():
             continue
 
         print(f"finish {i}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
