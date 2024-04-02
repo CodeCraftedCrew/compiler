@@ -6,8 +6,8 @@ from ast_nodes.hulk import VariableDeclarationNode, VariableNode, DestructiveAss
 from errors.error import Error
 from lexer.tools import Token
 from semantic.context import Context
-from semantic.scope import VariableInfo, Scope, InstanceInfo
-from semantic.types import NullType, Type
+from semantic.scope import Scope, InstanceInfo
+from semantic.types import NullType
 from visitor import visitor
 
 
@@ -27,16 +27,16 @@ class Interpreter:
         pass
 
     @visitor.when(VariableDeclarationNode)
-    def visit(self, node, scope: Scope):
+    def visit(self, node: VariableDeclarationNode, scope: Scope):
         expr_value = self.visit(node.expr, scope)
-        scope.local_vars.append(VariableInfo(node.id, value=expr_value))
+        scope.define_variable(node.id.lex, value=expr_value)
 
     @visitor.when(VariableNode)
     def visit(self, node, scope: Scope):
         variable_info = scope.find_variable(node.id.lex)
         if variable_info:
             return variable_info.value
-        return None
+        return NullType()
 
     @visitor.when(DestructiveAssignNode)
     def visit(self, node: DestructiveAssignNode, scope: Scope):
@@ -44,6 +44,8 @@ class Interpreter:
         variable_info = scope.find_variable(node.id.lex)
         if variable_info:
             variable_info.value = expr_value
+
+        return expr_value
 
     @visitor.when(IfNode)
     def visit(self, node: IfNode, scope: Scope):
@@ -283,6 +285,13 @@ class Interpreter:
 
             return self.visit(function, new_scope)
 
+    @visitor.when(ProtocolDeclarationNode)
+    def visit(self, node: ProtocolDeclarationNode, scope: Scope):
+
+        for method_declaration in node.methods:
+            self.symbols_table[f"{node.id.lex}.method:{method_declaration.id.lex}"] = (
+                [param.id.lex for param in method_declaration.params], method_declaration.body)
+
     @visitor.when(TypeDeclarationNode)
     def visit(self, node: TypeDeclarationNode, scope: Scope):
 
@@ -346,7 +355,6 @@ class Interpreter:
             for i in range(len(self_instance.param_names)):
                 new_scope.define_variable(self_instance.param_names[i], value=self_instance.param_values[i])
 
-
             names = list(parent.params.keys())
             values = [self.visit(arg, new_scope) for arg in arguments]
 
@@ -386,5 +394,4 @@ class Interpreter:
         instance = InstanceInfo(typex, param_names, param_values, attributes, typex.parent)
 
         return instance
-
 

@@ -3,6 +3,7 @@ from pathlib import Path
 
 from errors.error import Error
 from evaluation.evaluation import evaluate_reverse_parse
+from interpreter.interpreter import Interpreter
 from language.hulk import get_hulk_grammar
 from lexer.lexer import Lexer
 from lexer.pattern import get_patterns
@@ -68,6 +69,9 @@ def main():
 
         if error.errors:
             continue
+
+        interpreter = Interpreter(checker.context, error)
+        interpreter.visit(ast)
 
         print(f"finish {i}")
 
