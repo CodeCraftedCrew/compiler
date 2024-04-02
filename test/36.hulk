@@ -1,3 +1,3 @@
 function tan(x: Number): Number => sin(x) / cos(x);
 
-tan(5);
+print(tan(1));

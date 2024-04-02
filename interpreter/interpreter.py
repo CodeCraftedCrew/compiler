@@ -32,7 +32,7 @@ class Interpreter:
             "sqrt": math.sqrt,
             "exp": math.exp,
             "log": math.log,
-            "rand": random.randint,
+            "rand": random.random,
             "range": range
         }
 
@@ -59,9 +59,14 @@ class Interpreter:
     @visitor.when(DestructiveAssignNode)
     def visit(self, node: DestructiveAssignNode, scope: Scope):
         expr_value = self.visit(node.expr, scope)
-        variable_info = scope.find_variable(node.id.lex)
-        if variable_info:
-            variable_info.value = expr_value
+        if isinstance(node.id, Token):
+            variable_info = scope.find_variable(node.id.lex)
+            if variable_info:
+                variable_info.value = expr_value
+        if isinstance(node.id, CallNode):
+            variable_info = scope.find_variable("self")
+            if variable_info:
+                variable_info.value.attributes[node.id.token.lex] = expr_value
 
         return expr_value
 
@@ -83,7 +88,7 @@ class Interpreter:
         iterable_value = self.visit(node.iterable, scope)
         for item in iterable_value:
             child_scope = scope.create_child_scope()
-            child_scope.define_variable(node.item_id, value=item)
+            child_scope.define_variable(node.item_id.lex, value=item)
             self.visit(node.body, child_scope)
 
     @visitor.when(WhileNode)
@@ -227,7 +232,7 @@ class Interpreter:
         right_val = node.right.lex
         _, static_type = self.context.get_type(right_val)
 
-        return left_val.inferred_type.conforms_to(static_type)
+        return left_val.type.conforms_to(static_type)
 
     @visitor.when(AsNode)
     def visit(self, node: AsNode, scope: Scope):
@@ -261,7 +266,7 @@ class Interpreter:
     @visitor.when(LiteralNode)
     def visit(self, node: LiteralNode, scope: Scope):
         if (node.lex.token_type == TokenType.NUMBER):
-            return int(node.lex.lex)
+            return float(node.lex.lex)
         if (node.lex.token_type == TokenType.TRUE):
             return True
         if (node.lex.token_type == TokenType.FALSE):
@@ -289,7 +294,7 @@ class Interpreter:
                 if node.is_attribute:
                     return obj_value.attributes[node.token.lex]
                 else:
-                    params, method = self.symbols_table[f"{node.obj.inferred_type}.method:{node.token.lex}"]
+                    params, method = self.symbols_table[f"{node.obj.inferred_type.name}.method:{node.token.lex}"]
 
                     for i in range(len(params)):
                         new_scope.define_variable(params[i], value=args[i])
@@ -305,7 +310,7 @@ class Interpreter:
 
                 if node.token.lex == "base":
 
-                    self_instance = scope.find_variable("self")
+                    self_instance = scope.find_variable("self").value
                     return self.get_base_method(self_instance, args)
 
                 if node.token.lex in self.built_in_functions.keys():
@@ -374,6 +379,7 @@ class Interpreter:
 
     def get_base_method(self, self_instance: InstanceInfo, param_values):
         method_name = self.current_method[-1]
+        initial_args = self_instance.param_values
 
         assert method_name is not None, "`base` method can only be called from inside another one"
 
@@ -391,6 +397,9 @@ class Interpreter:
 
             names = list(parent.params.keys())
             values = [self.visit(arg, new_scope) for arg in arguments]
+
+            if len(values) != len(parent.params):
+                values = initial_args
 
             parent_instance = self.instantiate(parent, names, values)
 
@@ -416,14 +425,14 @@ class Interpreter:
 
     def instantiate(self, typex, param_names, param_values):
 
-        attrs = list(typex.all_attributes(False).keys())
+        attrs = list(attr.name for attr in typex.attributes)
 
         scope = Scope()
 
         for i in range(len(param_names)):
             scope.define_variable(param_names[i], value=param_values[i])
 
-        attributes = [self.visit(self.symbols_table[f"{typex.name}.attribute:{attr}"], scope) for attr in attrs]
+        attributes = {attr: self.visit(self.symbols_table[f"{typex.name}.attribute:{attr}"], scope) for attr in attrs}
 
         instance = InstanceInfo(typex, param_names, param_values, attributes, typex.parent)
 

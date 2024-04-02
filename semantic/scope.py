@@ -40,12 +40,12 @@ class Scope:
 
     def add_builtin(self):
         global_variables = {
-            "PI": math.pi,
-            "E": math.e
+            "PI": (NumberType(), math.pi),
+            "E": (NumberType(), math.e)
         }
 
-        for name, declared_type in global_variables.items():
-            self.define_variable(name, declared_type)
+        for name, (declared_type, value) in global_variables.items():
+            self.define_variable(name, declared_type, value=value)
 
     def create_child_scope(self):
         child_scope = Scope(self)
