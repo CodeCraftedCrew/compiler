@@ -1,12 +1,13 @@
 from ast_nodes.hulk import VariableDeclarationNode, VariableNode, DestructiveAssignNode, IfNode, ForNode, WhileNode, \
     BlockNode, LetNode, InstantiateNode, VectorNode, IndexNode, ModNode, PlusNode, MinusNode, StarNode, DivNode, OrNode, \
     AndNode, EqualNode, DifferentNode, LessNode, LessEqualNode, GreaterNode, GreaterEqualNode, IsNode, AsNode, \
-    ConcatNode, PowerNode, NotNode, LiteralNode, ExpressionNode
+    ConcatNode, PowerNode, NotNode, LiteralNode, ExpressionNode, ProgramNode, ParameterDeclarationNode, \
+    FunctionDeclarationNode, AttributeDeclarationNode, CallNode, TypeDeclarationNode, ProtocolDeclarationNode
 from errors.error import Error
 from lexer.tools import Token
 from semantic.context import Context
-from semantic.scope import VariableInfo, Scope
-from semantic.types import NullType
+from semantic.scope import VariableInfo, Scope, InstanceInfo
+from semantic.types import NullType, Type
 from visitor import visitor
 
 
@@ -14,6 +15,12 @@ class Interpreter:
     def __init__(self, context: Context, error: Error):
         self.context = context
         self.error = error
+        self.symbols_table = {}
+
+        self.global_scope = Scope()
+        self.global_scope.add_builtin()
+
+        self.current_method = []
 
     @visitor.when(ExpressionNode)
     def visit(self, node: ExpressionNode, scope: Scope):
@@ -87,7 +94,11 @@ class Interpreter:
 
     @visitor.when(InstantiateNode)
     def visit(self, node: InstantiateNode, scope: Scope):
-        params_values = [self.visit(param, scope) for param in node.params]
+        param_values = [self.visit(param, scope) for param in node.params]
+
+        param_names = list(node.inferred_type.params.keys())
+
+        return self.instantiate(node.inferred_type, param_names, param_values)
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, scope: Scope):
@@ -222,29 +233,148 @@ class Interpreter:
         return node.lex
     
     @visitor.when(CallNode)
-    def visit(self, node, scope):
-        function = scope.find_variable(node.id)
-        if function:
-            params = [self.visit(param, scope) for param in node.params]
-            return function.value(*params)
-        return None
-    
+    def visit(self, node: CallNode, scope: Scope):
+
+        new_scope = self.global_scope.create_child_scope()
+        args = [self.visit(arg, scope) for arg in node.params]
+
+        if node.obj:
+
+            obj_value = self.visit(node.obj, scope)
+
+            assert isinstance(obj_value, InstanceInfo), "Operator . can only be applied to instances."
+
+            if node.is_attribute:
+                return obj_value.attributes[node.token.lex]
+            else:
+                params, method = self.symbols_table[f"{node.obj.inferred_type}.method:{node.token.lex}"]
+
+                for i in range(len(params)):
+                    new_scope.define_variable(params[i], value=args[i])
+
+                new_scope.define_variable("self", value=obj_value)
+
+                self.current_method.append(node.token.lex)
+                result = self.visit(method, new_scope)
+                self.current_method.remove(node.token.lex)
+
+                return result
+        else:
+
+            if node.token.lex == "base":
+
+                self_instance = scope.find_variable("self")
+                return self.get_base_method(self_instance, args)
+
+            params, function = self.symbols_table[f"function:{node.token.lex}"]
+
+            for i in range(len(params)):
+                new_scope.define_variable(params[i], value=args[i])
+
+            return self.visit(function, new_scope)
+
     @visitor.when(TypeDeclarationNode)
-    def visit(self, node, scope):
-        pass
+    def visit(self, node: TypeDeclarationNode, scope: Scope):
+
+        success, value = self.context.get_type(node.id.lex)
+
+        if not success:
+            return
+
+        self.symbols_table[f"{node.id.lex}.{node.id.lex}.ctor"] = [param.id.lex for param in node.params]
+
+        if node.inherits:
+            self.symbols_table[f"from:{node.id.lex}to:{node.inherits.id.lex}"] = [arg for arg in node.inherits.arguments]
+
+        for attribute_definition in node.attributes:
+            self.symbols_table[f"{node.id.lex}.attribute:{attribute_definition.id.lex}"] = attribute_definition.expression
+
+        for method_declaration in node.methods:
+            self.symbols_table[f"{node.id.lex}.method:{method_declaration.id.lex}"] = (
+                [param.id.lex for param in method_declaration.params], method_declaration.body)
 
     @visitor.when(AttributeDeclarationNode)
     def visit(self, node, scope):
         pass
 
     @visitor.when(FunctionDeclarationNode)
-    def visit(self, node, scope):
-        pass
+    def visit(self, node: FunctionDeclarationNode, scope: Scope):
+        self.symbols_table[f"function:{node.id.lex}"] = (
+            [param.id.lex for param in node.params], node.body)
 
     @visitor.when(ParameterDeclarationNode)
-    def visit(self, node, scope):
+    def visit(self, node: ParameterDeclarationNode, scope: Scope):
         pass
 
     @visitor.when(ProgramNode)
-    def visit(self, node, scope):
-        pass
+    def visit(self, node: ProgramNode, scope: Scope):
+        for type_definition in [node for node in node.statements if isinstance(node, TypeDeclarationNode)]:
+            self.visit(type_definition, scope)
+
+        for protocol_definition in [node for node in node.statements if isinstance(node, ProtocolDeclarationNode)]:
+            self.visit(protocol_definition, scope)
+
+        for function_definition in [node for node in node.statements if isinstance(node, FunctionDeclarationNode)]:
+            self.visit(function_definition, scope)
+
+        self.visit(node.global_expression, scope)
+
+    def get_base_method(self, self_instance: InstanceInfo, param_values):
+        method_name = self.current_method[-1]
+
+        assert method_name is not None, "`base` method can only be called from inside another one"
+
+        child = self_instance.type
+        parent = self_instance.parent
+
+        while parent:
+
+            arguments = self.symbols_table[f"from:{child.name}to:{parent.name}"]
+
+            new_scope = Scope()
+
+            for i in range(len(self_instance.param_names)):
+                new_scope.define_variable(self_instance.param_names[i], value=self_instance.param_values[i])
+
+
+            names = list(parent.params.keys())
+            values = [self.visit(arg, new_scope) for arg in arguments]
+
+            parent_instance = self.instantiate(parent, names, values)
+
+            method_identifier = f"{parent.name}.method:{method_name}"
+
+            params, method = self.symbols_table.get(method_identifier, ([], None))
+
+            if method:
+
+                scope = self.global_scope.create_child_scope()
+                scope.define_variable("self", value=parent_instance)
+
+                for i in range(len(params)):
+                    scope.define_variable(params[i], value=param_values[i])
+
+                return self.visit(method, scope)
+
+            self_instance = parent_instance
+            child = parent
+            parent = parent.parent
+
+        raise Exception(f"Base for method {method_name} not found")
+
+    def instantiate(self, typex, param_names, param_values):
+
+        attrs = list(typex.all_attributes(False).keys())
+
+        scope = Scope()
+
+        for i in range(len(param_names)):
+            scope.define_variable(param_names[i], value=param_values[i])
+
+        attributes = [self.visit(self.symbols_table[f"{typex.name}.attribute:{attr}"], scope) for attr in attrs]
+
+        instance = InstanceInfo(typex, param_names, param_values, attributes, typex.parent)
+
+        return instance
+
+

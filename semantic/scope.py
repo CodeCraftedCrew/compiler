@@ -1,6 +1,6 @@
 import itertools as itl
 
-from semantic.types import UnknownType, NumberType, StringType, IterableType
+from semantic.types import UnknownType, NumberType, StringType, IterableType, Type
 
 
 class VariableInfo:
@@ -17,6 +17,15 @@ class FunctionInfo:
         self.params = params
         self.type = return_type
         self.inferred_type = UnknownType()
+
+
+class InstanceInfo:
+    def __init__(self, typex, param_names, param_values, attributes, parent: Type):
+        self.type = typex
+        self.param_names = param_names
+        self.param_values = param_values
+        self.attributes = attributes
+        self.parent = parent
 
 
 class Scope:
@@ -58,7 +67,7 @@ class Scope:
 
     def define_function(self, function_name, params, return_type=None):
         self.local_funcs.append(FunctionInfo(function_name, params, return_type))
-        
+
     def update_function_inferred_type(self, function_name, inferred_type):
         function = self.find_function(function_name)
 
