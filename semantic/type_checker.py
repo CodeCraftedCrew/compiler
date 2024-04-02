@@ -53,9 +53,9 @@ class TypeChecker:
     @visitor.when(InheritsNode)
     def visit(self, declaration: InheritsNode, scope: Scope):
 
-        for arg in declaration.arguments:
+        for arg in declaration.args_inferred_types:
             self.visit(arg, scope)
-            if arg.inferred_type in [UnknownType(), UndefinedType()]:
+            if arg in [UnknownType(), UndefinedType()]:
                 self.error("It was not possible to infer type argument", line=declaration.id.line)
 
         success, parent = self.context.get_type(declaration.id.lex)
