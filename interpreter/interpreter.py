@@ -1,3 +1,10 @@
+from ast_nodes.hulk import VariableDeclarationNode, VariableNode, DestructiveAssignNode, IfNode, ForNode, WhileNode, \
+    BlockNode, LetNode, InstantiateNode, VectorNode, IndexNode, ModNode, PlusNode, MinusNode, StarNode, DivNode, OrNode, \
+    AndNode, EqualNode, DifferentNode, LessNode, LessEqualNode, GreaterNode, GreaterEqualNode, IsNode, AsNode, \
+    ConcatNode, PowerNode, NotNode, LiteralNode, CallNode, TypeDeclarationNode, AttributeDeclarationNode, FunctionDeclarationNode, \
+    ParameterDeclarationNode, ProgramNode
+from semantic.scope import VariableInfo
+from visitor import visitor
 class Interpreter:
     def __init__(self):
         self.errors = []
@@ -78,6 +85,7 @@ class Interpreter:
     def visit(self, node, scope):
         obj_value = self.visit(node.obj, scope)
         index_value = self.visit(node.index, scope)
+        return obj_value[index_value]
 
     @visitor.when(ModNode)
     def visit(self, node, scope):
@@ -204,3 +212,31 @@ class Interpreter:
     @visitor.when(LiteralNode)
     def visit(self, node, scope):
         return node.lex
+    
+    @visitor.when(CallNode)
+    def visit(self, node, scope):
+        function = scope.find_variable(node.id)
+        if function:
+            params = [self.visit(param, scope) for param in node.params]
+            return function.value(*params)
+        return None
+    
+    @visitor.when(TypeDeclarationNode)
+    def visit(self, node, scope):
+        pass
+
+    @visitor.when(AttributeDeclarationNode)
+    def visit(self, node, scope):
+        pass
+
+    @visitor.when(FunctionDeclarationNode)
+    def visit(self, node, scope):
+        pass
+
+    @visitor.when(ParameterDeclarationNode)
+    def visit(self, node, scope):
+        pass
+
+    @visitor.when(ProgramNode)
+    def visit(self, node, scope):
+        pass
