@@ -362,16 +362,19 @@ class TypeChecker:
 
             if len(parent.params) > 0:
 
-                args = list(parent.params.values())
+                args = parent.params_inferred_type
 
                 if len(args) != len(node.params_inferred_type):
                     self.error(f"{parent.name} expects {len(parent.params)} arguments, "
                                f"got {len(node.params_inferred_type)}", line=node.idx.line)
 
                 for i in range(len(args)):
-                    if not node.params_inferred_type[i].conforms_to_type(args[i]):
+                    if not node.params_inferred_type[i].conforms_to(args[i]):
                         self.error(f"Argument type mismatch, on {parent.name} got {node.params_inferred_type[i].name} "
                                    f"expected {args[i].name}", line=node.idx.line)
+                break
+            else:
+                parent = parent.parent
 
         if not success:
             self.error(f"Invalid type {node.idx.lex} for instance", line=node.idx.line)
