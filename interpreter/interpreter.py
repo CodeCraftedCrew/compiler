@@ -1,4 +1,5 @@
 import math
+import random
 
 from ast_nodes.hulk import VariableDeclarationNode, VariableNode, DestructiveAssignNode, IfNode, ForNode, WhileNode, \
     BlockNode, LetNode, InstantiateNode, VectorNode, IndexNode, ModNode, PlusNode, MinusNode, StarNode, DivNode, OrNode, \
@@ -25,7 +26,14 @@ class Interpreter:
         self.current_method = []
         self.built_in_functions = {
             "print": print,
-            "cos": math.cos
+            "cos": math.cos,
+            "sin": math.sin,
+            "tan": math.tan,
+            "sqrt": math.sqrt,
+            "exp": math.exp,
+            "log": math.log,
+            "rand": random.randint,
+            "range": range
         }
 
     @visitor.on('node')
