@@ -10,4 +10,4 @@ type Point {
 }
 
 let pt = new Point() in
-    print("x: " @ pt.setX(3) @ "; y: " @ pt.setY(4));
+    print("x: " @ pt.getX() @ "; y: " @ pt.setY(4));

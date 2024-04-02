@@ -9,7 +9,7 @@ from ast_nodes.hulk import VariableDeclarationNode, VariableNode, DestructiveAss
 from errors.error import Error
 from lexer.tools import Token, TokenType
 from semantic.context import Context
-from semantic.scope import Scope, InstanceInfo
+from semantic.scope import Scope, InstanceInfo, VariableInfo
 from semantic.types import NullType, NumberType
 from visitor import visitor
 
@@ -281,7 +281,10 @@ class Interpreter:
     @visitor.when(LiteralNode)
     def visit(self, node: LiteralNode, scope: Scope):
         if (node.lex.token_type == TokenType.NUMBER):
-            return float(node.lex.lex)
+            if '.' in node.lex.lex:
+                return float(node.lex.lex)
+            else:
+                return int(node.lex.lex)
         if (node.lex.token_type == TokenType.TRUE):
             return True
         if (node.lex.token_type == TokenType.FALSE):
