@@ -1,3 +1,5 @@
+import math
+
 from ast_nodes.hulk import VariableDeclarationNode, VariableNode, DestructiveAssignNode, IfNode, ForNode, WhileNode, \
     BlockNode, LetNode, InstantiateNode, VectorNode, IndexNode, ModNode, PlusNode, MinusNode, StarNode, DivNode, OrNode, \
     AndNode, EqualNode, DifferentNode, LessNode, LessEqualNode, GreaterNode, GreaterEqualNode, IsNode, AsNode, \
@@ -21,6 +23,10 @@ class Interpreter:
         self.global_scope.add_builtin()
 
         self.current_method = []
+        self.built_in_functions = {
+            "print": print,
+            "cos": math.cos
+        }
 
     @visitor.on('node')
     def visit(self, node, scope):
@@ -237,7 +243,7 @@ class Interpreter:
     def visit(self, node: PowerNode, scope: Scope):
         left_val = self.visit(node.left, scope)
         right_val = self.visit(node.right, scope)
-        return left_val ** right_val
+        return int(left_val.lex) ** int(right_val.lex)
 
     @visitor.when(NotNode)
     def visit(self, node: NotNode, scope: Scope):
@@ -281,6 +287,9 @@ class Interpreter:
 
                 self_instance = scope.find_variable("self")
                 return self.get_base_method(self_instance, args)
+
+            if node.token.lex in self.built_in_functions.keys():
+                return self.built_in_functions[node.token.lex](args)
 
             params, function = self.symbols_table[f"function:{node.token.lex}"]
 
