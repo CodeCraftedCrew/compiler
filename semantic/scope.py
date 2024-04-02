@@ -1,4 +1,5 @@
 import itertools as itl
+import math
 
 from semantic.types import UnknownType, NumberType, StringType, IterableType, Type
 
@@ -39,8 +40,8 @@ class Scope:
 
     def add_builtin(self):
         global_variables = {
-            "PI": NumberType(),
-            "E": NumberType()
+            "PI": math.pi,
+            "E": math.e
         }
 
         for name, declared_type in global_variables.items():

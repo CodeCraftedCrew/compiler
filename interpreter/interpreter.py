@@ -7,10 +7,10 @@ from ast_nodes.hulk import VariableDeclarationNode, VariableNode, DestructiveAss
     ConcatNode, PowerNode, NotNode, LiteralNode, ExpressionNode, ProgramNode, ParameterDeclarationNode, \
     FunctionDeclarationNode, AttributeDeclarationNode, CallNode, TypeDeclarationNode, ProtocolDeclarationNode
 from errors.error import Error
-from lexer.tools import Token
+from lexer.tools import Token, TokenType
 from semantic.context import Context
 from semantic.scope import Scope, InstanceInfo
-from semantic.types import NullType
+from semantic.types import NullType, NumberType
 from visitor import visitor
 
 
@@ -251,7 +251,7 @@ class Interpreter:
     def visit(self, node: PowerNode, scope: Scope):
         left_val = self.visit(node.left, scope)
         right_val = self.visit(node.right, scope)
-        return int(left_val.lex) ** int(right_val.lex)
+        return left_val ** right_val
 
     @visitor.when(NotNode)
     def visit(self, node: NotNode, scope: Scope):
@@ -260,51 +260,63 @@ class Interpreter:
 
     @visitor.when(LiteralNode)
     def visit(self, node: LiteralNode, scope: Scope):
-        return node.lex
+        if (node.lex.token_type == TokenType.NUMBER):
+            return int(node.lex.lex)
+        if (node.lex.token_type == TokenType.TRUE):
+            return True
+        if (node.lex.token_type == TokenType.FALSE):
+            return False
+        return str(node.lex.lex)
+
     
     @visitor.when(CallNode)
     def visit(self, node: CallNode, scope: Scope):
+        func_name = node.token.lex
+        if func_name in self.built_in_functions:
+            func = self.built_in_functions[func_name]
+            args = [self.visit(arg, scope) for arg in node.params]
+            return func(*args)
+        else:
+            new_scope = self.global_scope.create_child_scope()
+            args = [self.visit(arg, scope) for arg in node.params]
 
-        new_scope = self.global_scope.create_child_scope()
-        args = [self.visit(arg, scope) for arg in node.params]
+            if node.obj:
 
-        if node.obj:
+                obj_value = self.visit(node.obj, scope)
 
-            obj_value = self.visit(node.obj, scope)
+                assert isinstance(obj_value, InstanceInfo), "Operator . can only be applied to instances."
 
-            assert isinstance(obj_value, InstanceInfo), "Operator . can only be applied to instances."
+                if node.is_attribute:
+                    return obj_value.attributes[node.token.lex]
+                else:
+                    params, method = self.symbols_table[f"{node.obj.inferred_type}.method:{node.token.lex}"]
 
-            if node.is_attribute:
-                return obj_value.attributes[node.token.lex]
+                    for i in range(len(params)):
+                        new_scope.define_variable(params[i], value=args[i])
+
+                    new_scope.define_variable("self", value=obj_value)
+
+                    self.current_method.append(node.token.lex)
+                    result = self.visit(method, new_scope)
+                    self.current_method.remove(node.token.lex)
+
+                    return result
             else:
-                params, method = self.symbols_table[f"{node.obj.inferred_type}.method:{node.token.lex}"]
+
+                if node.token.lex == "base":
+
+                    self_instance = scope.find_variable("self")
+                    return self.get_base_method(self_instance, args)
+
+                if node.token.lex in self.built_in_functions.keys():
+                    return self.built_in_functions[node.token.lex](args)
+
+                params, function = self.symbols_table[f"function:{node.token.lex}"]
 
                 for i in range(len(params)):
                     new_scope.define_variable(params[i], value=args[i])
 
-                new_scope.define_variable("self", value=obj_value)
-
-                self.current_method.append(node.token.lex)
-                result = self.visit(method, new_scope)
-                self.current_method.remove(node.token.lex)
-
-                return result
-        else:
-
-            if node.token.lex == "base":
-
-                self_instance = scope.find_variable("self")
-                return self.get_base_method(self_instance, args)
-
-            if node.token.lex in self.built_in_functions.keys():
-                return self.built_in_functions[node.token.lex](args)
-
-            params, function = self.symbols_table[f"function:{node.token.lex}"]
-
-            for i in range(len(params)):
-                new_scope.define_variable(params[i], value=args[i])
-
-            return self.visit(function, new_scope)
+                return self.visit(function, new_scope)
 
     @visitor.when(ProtocolDeclarationNode)
     def visit(self, node: ProtocolDeclarationNode, scope: Scope):
@@ -358,6 +370,7 @@ class Interpreter:
             self.visit(function_definition, self.global_scope)
 
         self.visit(node.global_expression, self.global_scope)
+        self.global_scope.add_builtin()
 
     def get_base_method(self, self_instance: InstanceInfo, param_values):
         method_name = self.current_method[-1]
