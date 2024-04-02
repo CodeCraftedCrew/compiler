@@ -33,7 +33,7 @@ class Interpreter:
 
     @visitor.when(VariableNode)
     def visit(self, node, scope: Scope):
-        variable_info = scope.find_variable(node.id)
+        variable_info = scope.find_variable(node.id.lex)
         if variable_info:
             return variable_info.value
         return None
@@ -102,8 +102,18 @@ class Interpreter:
 
     @visitor.when(VectorNode)
     def visit(self, node: VectorNode, scope: Scope):
-        elements_values = [self.visit(element, scope) for element in node.elements]
-        generator_value = self.visit(node.generator, scope) if node.generator else None
+        if node.elements:
+            elements_values = [self.visit(element, scope) for element in node.elements]
+            return elements_values
+        else:
+            scope.local_vars.append(VariableInfo(node.item, value=None))
+            iterator_value = self.visit(node.iterator, scope) 
+            var = scope.find_variable(node.item)
+            result = []
+            for i in iterator_value:
+                var.value = i
+                result.append(self.visit(node.generator, scope))
+            return result
 
     @visitor.when(IndexNode)
     def visit(self, node: IndexNode, scope: Scope):
