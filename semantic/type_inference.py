@@ -3,9 +3,10 @@ from ast_nodes.hulk import ProgramNode, TypeDeclarationNode, BlockNode, LiteralN
     ProtocolDeclarationNode, FunctionDeclarationNode, ParameterDeclarationNode, AttributeDeclarationNode, \
     DestructiveAssignNode, CallNode, IfNode, ForNode, WhileNode, LetNode, InstantiateNode, MinusNode, PlusNode, DivNode, \
     StarNode, PowerNode, DifferentNode, LessEqualNode, GreaterNode, EqualNode, LessNode, GreaterEqualNode, IsNode, \
-    AsNode, OrNode, AndNode, ConcatNode, NotNode, ModNode, VariableNode, InheritsNode
+    AsNode, OrNode, AndNode, ConcatNode, NotNode, ModNode, VariableNode, InheritsNode, VectorNode, IndexNode
 from lexer.tools import TokenType, Token
-from semantic.types import UnknownType, BooleanType, NumberType, StringType, NullType, UndefinedType, IterableType, Type
+from semantic.types import UnknownType, BooleanType, NumberType, StringType, NullType, UndefinedType, IterableType, \
+    Type, VectorType
 from semantic.scope import Scope
 from visitor import visitor
 from errors.error import Error
@@ -78,6 +79,10 @@ class TypeInference:
     def visit(self, attribute_declaration: AttributeDeclarationNode, scope):
 
         inferred_type = self.visit(attribute_declaration.expression, scope)
+
+        if inferred_type != attribute_declaration.expression.inferred_type:
+            self.changes = True
+            attribute_declaration.expression.inferred_type = inferred_type
 
         if inferred_type != attribute_declaration.inferred_type:
             self.changes = True
@@ -184,7 +189,7 @@ class TypeInference:
             self.changes = True
             variable.inferred_type = inferred_type
 
-        return self.get_return_type(variable.type.lex) if variable.type else variable.inferred_type
+        return variable.inferred_type
 
     @visitor.when(VariableNode)
     def visit(self, variable: VariableNode, scope: Scope):
@@ -209,6 +214,10 @@ class TypeInference:
             declared_type = variable.type
         else:
             declared_type = self.visit(assign.id, scope)
+
+            if assign.id.inferred_type != declared_type:
+                self.changes = True
+                assign.id.inferred_type = declared_type
 
         inferred_type = self.visit(assign.expr, scope)
 
@@ -294,23 +303,11 @@ class TypeInference:
     def visit(self, node: ForNode, scope: Scope):
 
         inferred_iterable_type = self.visit(node.iterable, scope)
-        inferred_type_item = None
 
-        if isinstance(inferred_iterable_type, IterableType):
-            if isinstance(inferred_iterable_type.value_type, str):
-
-                success, type = self.context.get_type(inferred_iterable_type.value_type)
-
-                if success:
-                    inferred_type_item = type
-                else:
-                    inferred_type_item = UnknownType()
-
-            elif isinstance(inferred_iterable_type.value_type, Type):
-                inferred_type_item = inferred_iterable_type.value_type
-
-            else:
-                inferred_type_item = UnknownType()
+        if inferred_iterable_type.conforms_to(IterableType()) and not isinstance(inferred_iterable_type, UnknownType):
+            inferred_type_item = inferred_iterable_type.get_method("current")[1].return_type
+        else:
+            inferred_type_item = UnknownType()
 
         new_scope = scope.create_child_scope()
         new_scope.define_variable(node.item_id.lex, self.get_return_type(node.item_declared_type.lex) if node.item_declared_type else None, inferred_type_item)
@@ -479,6 +476,66 @@ class TypeInference:
         node.expression.inferred_type = inferred_type
 
         return BooleanType()
+
+    @visitor.when(VectorNode)
+    def visit(self, node: VectorNode, scope: Scope):
+        if node.elements:
+
+            types = []
+            for element in node.elements:
+                inferred_type = self.visit(element, scope)
+                if element.inferred_type != inferred_type:
+                    self.changes = True
+                    element.inferred_type = inferred_type
+                types.append(inferred_type)
+
+            lca = types[0]
+            for inferred_type in types:
+                lca = self.context.get_lowest_ancestor(lca, inferred_type)
+
+            node.inferred_type = VectorType(lca)
+
+            return VectorType(lca)
+        else:
+            inferred_iterable_type = self.visit(node.iterator, scope)
+
+            if node.iterator.inferred_type != inferred_iterable_type:
+                self.changes = True
+                node.iterator.inferred_type = inferred_iterable_type
+
+            if inferred_iterable_type.conforms_to(IterableType()) and not isinstance(inferred_iterable_type,
+                                                                                     UnknownType):
+                inferred_type_item = inferred_iterable_type.get_method("current")[1].return_type
+            else:
+                inferred_type_item = UnknownType()
+
+            new_scope = scope.create_child_scope()
+            new_scope.define_variable(node.item.lex, None, inferred_type_item)
+
+            inferred_type = self.visit(node.generator, new_scope)
+            node.inferred_type = VectorType(inferred_type)
+
+            return VectorType(inferred_type)
+
+    @visitor.when(IndexNode)
+    def visit(self, node: IndexNode, scope: Scope):
+
+        left_inferred_type = self.visit(node.obj, scope)
+
+        if node.obj.inferred_type != left_inferred_type:
+            self.changes = True
+            node.obj.inferred_type = left_inferred_type
+
+        index_inferred_type = self.visit(node.index, scope)
+
+        if node.index.inferred_type != index_inferred_type:
+            self.changes = True
+            node.index.inferred_type = index_inferred_type
+
+        if isinstance(left_inferred_type, VectorType):
+            return left_inferred_type.item_type
+        return UnknownType()
+
 
     @visitor.when(LiteralNode)
     def visit(self, literal: LiteralNode, scope: Scope):

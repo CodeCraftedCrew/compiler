@@ -131,6 +131,33 @@ class Type:
         return plain.values() if clean else plain
 
     def conforms_to(self, other):
+
+        if self.is_protocol:
+            return False
+
+        if other.is_protocol:
+
+            protocol_methods = list(other.all_methods(False).items())
+
+            for method_name, (method, _) in protocol_methods:
+
+                success, value = self.get_method(method_name)
+
+                if not success:
+                    return False
+
+                if len(method.param_types) != len(value.param_types):
+                    return False
+
+                for i in range(len(method.param_types)):
+                    if not method.param_types[i].conforms_to(value.param_types[i]):
+                        return False
+
+                if not value.return_type.conforms_to(method.return_type):
+                    return False
+
+            return True
+
         return other.bypass() or self == other or self.parent is not None and self.parent.conforms_to(other)
 
     def bypass(self):
@@ -138,7 +165,6 @@ class Type:
 
     def __str__(self):
         if self.is_protocol:
-
             output = f'protocol {self.name}'
             parent = '' if self.parent is None else ' extends' + ', '.join(parent.name for parent in self.parent)
             output += parent
@@ -288,19 +314,36 @@ class NullType(Type):
         return False
 
 
+class RangeType(Type):
+    def __init__(self):
+        Type.__init__(self, "built-range")
+        self.methods = [Method("current", [], [], NumberType(), -1),
+                        Method("next", [], [], BooleanType(), -1)]
+        self.parent = ObjectType()
+
+
+class VectorType(Type):
+    def __init__(self, typex):
+        self.item_type = typex
+        Type.__init__(self, "vector")
+        self.methods = [Method("current", [], [], typex, -1),
+                        Method("next", [], [], BooleanType(), -1),
+                        Method("size", [], [], NumberType(), -1)]
+        self.parent = ObjectType()
+        self.depth = 1
+
+    def __eq__(self, other):
+        return other and isinstance(other, VectorType) and self.item_type == other.item_type
+
+
 class IterableType(Type):
-    def __init__(self, value_type):
-        Type.__init__(self, "Iterable")
-        self.value_type = value_type
-        self.methods = [Method("current", [], [], self.value_type, -1),
+    def __init__(self):
+        Type.__init__(self, "Iterable", is_protocol=True)
+        self.methods = [Method("current", [], [], ObjectType(), -1),
                         Method("next", [], [], BooleanType(), -1)]
 
     def conforms_to(self, other):
-        return (isinstance(other, ObjectType) or
-                (isinstance(other, IterableType) and other.value_type.conforms_to(self.value_type)))
-
-    def __str__(self):
-        return f"Iterable<{self.value_type.name}>"
+        return False
 
 
 class UndefinedType(Type):

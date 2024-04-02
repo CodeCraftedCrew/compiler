@@ -3,11 +3,11 @@ from ast_nodes.hulk import ProgramNode, TypeDeclarationNode, AttributeDeclaratio
     ProtocolDeclarationNode, VariableDeclarationNode, DestructiveAssignNode, CallNode, IfNode, ForNode, BlockNode, \
     WhileNode, LetNode, InstantiateNode, AsNode, PlusNode, MinusNode, DivNode, StarNode, PowerNode, \
     NotNode, LiteralNode, ConcatNode, LessEqualNode, GreaterEqualNode, IsNode, GreaterNode, LessNode, \
-    OrNode, AndNode, ParameterDeclarationNode, VariableNode, InheritsNode
+    OrNode, AndNode, ParameterDeclarationNode, VariableNode, InheritsNode, VectorNode, IndexNode
 from errors.error import Error
 from lexer.tools import Token
 from semantic.scope import Scope
-from semantic.types import UnknownType, IterableType, BooleanType, NumberType, UndefinedType, StringType
+from semantic.types import UnknownType, IterableType, BooleanType, NumberType, UndefinedType, StringType, VectorType
 from visitor import visitor
 
 
@@ -214,7 +214,6 @@ class TypeChecker:
 
             if assign.id.lex == "self" and self.current_type:
                 self.error("`self` is not a valid assignment target", token=assign.id)
-
         else:
             self.visit(assign.id, scope)
             declared_type = assign.id.inferred_type
@@ -222,9 +221,14 @@ class TypeChecker:
         self.visit(assign.expr, scope)
 
         if not assign.inferred_type.conforms_to(declared_type):
-            self.error(
-                f"Inferred type for destructive assignment does not conform to declared type for variable {assign.id.lex}"
-                , line=assign.id.line)
+            if isinstance(assign.id, Token):
+                self.error(
+                    f"Inferred type for destructive assignment does not conform to declared type for variable {assign.id.lex}"
+                    , line=assign.id.line)
+            else:
+                self.error(
+                    f"Inferred type for destructive assignment does not conform to declared type for the variable")
+
 
     @visitor.when(VariableNode)
     def visit(self, node, scope):
@@ -312,9 +316,9 @@ class TypeChecker:
         else:
             item_type = node.item_inferred_type
 
-        if not node.iterable.inferred_type.conforms_to(IterableType(item_type)):
-            self.error(f"Type can not be determined because there is no implicit conversion from Iterable of "
-                       f"{item_type.name} to {node.inferred_type}", line=node.item_id.line)
+        if not node.iterable.inferred_type.conforms_to(IterableType()):
+            self.error(f"Type can not be determined because there is no implicit conversion from Iterable to "
+                       f"{node.inferred_type}", line=node.item_id.line)
 
         new_scope = scope.create_child_scope()
         new_scope.define_variable(node.item_id.lex, item_type)
@@ -427,7 +431,42 @@ class TypeChecker:
 
         self.visit(node.expression, scope)
 
-        return BooleanType()
+    @visitor.when(VectorNode)
+    def visit(self, node: VectorNode, scope: Scope):
+
+        if node.elements:
+
+            for element in node.elements:
+                self.visit(element, scope)
+
+            if isinstance(node.inferred_type, VectorType) and node.inferred_type.item_type in [UnknownType(), UndefinedType()]:
+                self.error(f"Type of elements in vector could not be inferred")
+
+        else:
+            self.visit(node.iterator, scope)
+
+            if not node.iterator.inferred_type.conforms_to(IterableType()):
+                self.error(f"Type can not be determined because there is no implicit conversion from Vector to "
+                           f"{node.iterator.inferred_type.name}", line=node.item.line)
+                return
+
+            new_scope = scope.create_child_scope()
+            new_scope.define_variable(node.item.lex, node.iterator.inferred_type.get_method("current")[1].return_type)
+
+            self.visit(node.generator, new_scope)
+
+    @visitor.when(IndexNode)
+    def visit(self, node: IndexNode, scope: Scope):
+
+        self.visit(node.obj, scope)
+
+        if not isinstance(node.obj, VectorType):
+            self.error(f"Indexing is only valid for vectors")
+
+        self.visit(node.index, scope)
+
+        if node.index.inferred_type != NumberType():
+            self.error(f"Index must be a number")
 
     @visitor.when(LiteralNode)
     def visit(self, literal: LiteralNode, scope: Scope):

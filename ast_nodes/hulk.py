@@ -164,8 +164,9 @@ class InstantiateNode(ExpressionNode):
 
 
 class VectorNode(ExpressionNode):
-    def __init__(self, elements: list[ExpressionNode], generator: ExpressionNode = None, item: str = None,
+    def __init__(self, elements: list[ExpressionNode], generator: ExpressionNode = None, item: Token = None,
                  iterator: ExpressionNode = None):
+        super().__init__()
         self.elements = elements
         self.generator = generator
         self.item = item
@@ -174,6 +175,7 @@ class VectorNode(ExpressionNode):
 
 class IndexNode(ExpressionNode):
     def __init__(self, obj: ExpressionNode, index: ExpressionNode):
+        super().__init__()
         self.obj = obj
         self.index = index
 

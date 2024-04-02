@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
-from semantic.types import Type, Method, NumberType, StringType, BooleanType, ObjectType, IterableType, UnknownType, \
-    UndefinedType
+from semantic.types import Type, Method, NumberType, StringType, BooleanType, ObjectType, UnknownType, \
+    UndefinedType, RangeType
 
 
 class Context:
@@ -52,7 +52,7 @@ class Context:
             "exp": (["value"], [NumberType()], NumberType()),
             "rand": ([], [], NumberType()),
             "print": (["message"], [StringType()], StringType()),
-            "range": (["min", "max"], [NumberType(), NumberType()], IterableType(NumberType()))
+            "range": (["min", "max"], [NumberType(), NumberType()], RangeType())
         }
 
         for func_name, (param_names, param_types, return_type) in global_functions.items():
@@ -66,10 +66,10 @@ class Context:
 
     def get_lowest_ancestor(self, type_a, type_b):
 
-        if type_a in [UnknownType(), UndefinedType()]:
+        if type_a in [UnknownType(), UndefinedType()] or type_a.is_protocol:
             return type_b
 
-        if type_b in [UnknownType(), UndefinedType()]:
+        if type_b in [UnknownType(), UndefinedType()] or type_b.is_protocol:
             return type_a
 
         while type_a.depth > type_b.depth:
