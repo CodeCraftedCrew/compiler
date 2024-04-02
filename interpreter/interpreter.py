@@ -86,10 +86,26 @@ class Interpreter:
     @visitor.when(ForNode)
     def visit(self, node: ForNode, scope: Scope):
         iterable_value = self.visit(node.iterable, scope)
-        for item in iterable_value:
-            child_scope = scope.create_child_scope()
-            child_scope.define_variable(node.item_id.lex, value=item)
-            self.visit(node.body, child_scope)
+        result = NullType
+
+        if (isinstance(node.iterable, CallNode) and node.iterable.token.lex == "range") or isinstance(iterable_value, list):
+            for item in iterable_value:
+                child_scope = scope.create_child_scope()
+                child_scope.define_variable(node.item_id.lex, value=item)
+                result = self.visit(node.body, child_scope)
+
+            return result
+
+        transform = LetNode(
+            declarations=[VariableDeclarationNode(Token("iterable", TokenType.IDENTIFIER, -1, -1), None, node.iterable)],
+            body=WhileNode(
+                condition=CallNode(VariableNode(Token("iterable", TokenType.IDENTIFIER, -1, -1)), Token("next", TokenType.IDENTIFIER, -1, -1), []),
+                body=LetNode(
+                    declarations=[VariableDeclarationNode(node.item_id, None, CallNode(VariableNode(Token("iterable", TokenType.IDENTIFIER, -1, -1)), Token("current", TokenType.IDENTIFIER, -1, -1), []))],
+                    body=node.body)))
+
+        return self.visit(transform, scope)
+
 
     @visitor.when(WhileNode)
     def visit(self, node: WhileNode, scope: Scope):
@@ -131,8 +147,7 @@ class Interpreter:
             elements_values = [self.visit(element, scope) for element in node.elements]
             return elements_values
         else:
-            scope.local_vars.append(VariableInfo(node.item, value=None))
-            iterator_value = self.visit(node.iterator, scope) 
+            iterator_value = self.visit(node.iterator, scope)
             var = scope.find_variable(node.item)
             result = []
             for i in iterator_value:
@@ -294,7 +309,7 @@ class Interpreter:
                 if node.is_attribute:
                     return obj_value.attributes[node.token.lex]
                 else:
-                    params, method = self.symbols_table[f"{node.obj.inferred_type.name}.method:{node.token.lex}"]
+                    params, method = self.symbols_table[f"{obj_value.type.name}.method:{node.token.lex}"]
 
                     for i in range(len(params)):
                         new_scope.define_variable(params[i], value=args[i])
