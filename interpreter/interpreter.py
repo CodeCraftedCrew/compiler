@@ -22,6 +22,10 @@ class Interpreter:
 
         self.current_method = []
 
+    @visitor.on('node')
+    def visit(self, node, scope):
+        pass
+
     @visitor.when(ExpressionNode)
     def visit(self, node: ExpressionNode, scope: Scope):
         pass
@@ -326,17 +330,17 @@ class Interpreter:
         pass
 
     @visitor.when(ProgramNode)
-    def visit(self, node: ProgramNode, scope: Scope):
+    def visit(self, node: ProgramNode):
         for type_definition in [node for node in node.statements if isinstance(node, TypeDeclarationNode)]:
-            self.visit(type_definition, scope)
+            self.visit(type_definition, self.global_scope)
 
         for protocol_definition in [node for node in node.statements if isinstance(node, ProtocolDeclarationNode)]:
-            self.visit(protocol_definition, scope)
+            self.visit(protocol_definition, self.global_scope)
 
         for function_definition in [node for node in node.statements if isinstance(node, FunctionDeclarationNode)]:
-            self.visit(function_definition, scope)
+            self.visit(function_definition, self.global_scope)
 
-        self.visit(node.global_expression, scope)
+        self.visit(node.global_expression, self.global_scope)
 
     def get_base_method(self, self_instance: InstanceInfo, param_values):
         method_name = self.current_method[-1]
