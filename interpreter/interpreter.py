@@ -12,7 +12,7 @@ class Interpreter:
     @visitor.when(VariableDeclarationNode)
     def visit(self, node, scope):
         expr_value = self.visit(node.expr, scope)
-        scope.local_vars.append(VariableInfo(node.id, expr_value))
+        scope.local_vars.append(VariableInfo(node.id, value=expr_value))
 
     @visitor.when(VariableNode)
     def visit(self, node, scope):
@@ -32,21 +32,22 @@ class Interpreter:
     def visit(self, node, scope):
         condition_value = self.visit(node.condition, scope)
         if condition_value:
-            return self.visit(node.body, scope)
+            return self.visit(node.body, scope.create_child_scope())
         for elif_clause in node.elif_clauses:
             elif_condition_value = self.visit(elif_clause.condition, scope)
             if elif_condition_value:
-                return self.visit(elif_clause.body, scope)
+                return self.visit(elif_clause.body, scope.create_child_scope())
         if node.else_body:
-            return self.visit(node.else_body, scope)
+            return self.visit(node.else_body, scope.create_child_scope())
         return None
 
     @visitor.when(ForNode)
     def visit(self, node, scope):
         iterable_value = self.visit(node.iterable, scope)
         for item in iterable_value:
-            local_variables = {node.item_id: item}
-            self.visit(node.body, scope.create_child_scope(), local_variables)
+            child_scope = scope.create_child_scope()
+            child_scope.define_variable(node.item_id, value=item)
+            self.visit(node.body, child_scope)
 
     @visitor.when(WhileNode)
     def visit(self, node, scope):
@@ -68,9 +69,10 @@ class Interpreter:
 
     @visitor.when(LetNode)
     def visit(self, node, scope):
+        child_scope = scope.create_child_scope()
         for decl in node.declarations:
-            self.visit(decl, scope)
-        return self.visit(node.body, scope)
+            self.visit(decl, child_scope)
+        return self.visit(node.body, child_scope)
 
     @visitor.when(InstantiateNode)
     def visit(self, node, scope):
