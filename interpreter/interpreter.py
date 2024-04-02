@@ -148,11 +148,36 @@ class Interpreter:
             return elements_values
         else:
             iterator_value = self.visit(node.iterator, scope)
-            var = scope.find_variable(node.item)
+
             result = []
-            for i in iterator_value:
-                var.value = i
-                result.append(self.visit(node.generator, scope))
+
+            if (isinstance(node.iterator, CallNode) and node.iterator.token.lex == "range") or isinstance(
+                    iterator_value, list):
+                for item in iterator_value:
+                    child_scope = scope.create_child_scope()
+                    child_scope.define_variable(node.item.lex, value=item)
+                    result.append(self.visit(node.generator, child_scope))
+
+                return result
+
+            new_scope = scope.create_child_scope()
+            new_scope.define_variable("iterator", value=iterator_value)
+
+            condition = CallNode(VariableNode(Token("iterator", TokenType.IDENTIFIER, -1, -1)),
+                                       Token("next", TokenType.IDENTIFIER, -1, -1), [])
+
+            condition_value = self.visit(condition, new_scope)
+            while condition_value:
+                item_value = self.visit(CallNode(
+                            VariableNode(Token("iterator", TokenType.IDENTIFIER, -1, -1)),
+                            Token("current", TokenType.IDENTIFIER, -1, -1), []), new_scope)
+
+                while_scope = new_scope.create_child_scope()
+                while_scope.define_variable(node.item.lex, item_value)
+
+                result.append(self.visit(node.generator, while_scope))
+                condition_value = self.visit(condition, new_scope)
+
             return result
 
     @visitor.when(IndexNode)

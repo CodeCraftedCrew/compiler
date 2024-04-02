@@ -37,7 +37,7 @@ def main():
 
     parser = LR1Parser(grammar, src_path / 'cache/hulk')
 
-    for i in range(32, 45):
+    for i in range(34, 45):
         with open(src_path / f'test/{i}.hulk', 'r') as f:
             program = f.read()
 
