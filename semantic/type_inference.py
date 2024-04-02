@@ -183,6 +183,7 @@ class TypeInference:
     def visit(self, variable: VariableDeclarationNode, scope: Scope):
 
         inferred_type = self.visit(variable.expr, scope)
+        variable.expr.inferred_type = inferred_type
         lca = self.context.get_lowest_ancestor(variable.inferred_type, inferred_type)
 
         if variable.inferred_type != lca:
@@ -220,6 +221,7 @@ class TypeInference:
                 assign.id.inferred_type = declared_type
 
         inferred_type = self.visit(assign.expr, scope)
+        assign.expr.inferred_type = inferred_type
 
         if assign.inferred_type != inferred_type:
             self.changes = True
@@ -313,6 +315,7 @@ class TypeInference:
         new_scope.define_variable(node.item_id.lex, self.get_return_type(node.item_declared_type.lex) if node.item_declared_type else None, inferred_type_item)
 
         inferred_type = self.visit(node.body, new_scope)
+        node.body.inferred_type = inferred_type
         node.inferred_type = inferred_type
 
         return inferred_type
@@ -339,6 +342,7 @@ class TypeInference:
 
         for expression in block.body:
             exp_type = self.visit(expression, scope.create_child_scope())
+            expression.inferred_type = exp_type
 
         block.inferred_type = exp_type
         return exp_type
@@ -357,6 +361,7 @@ class TypeInference:
             new_scope = new_scope.create_child_scope()
 
         inferred_type = self.visit(node.body, new_scope)
+        node.body.inferred_type = inferred_type
 
         if node.inferred_type != inferred_type:
             self.changes = True

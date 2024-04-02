@@ -44,6 +44,9 @@ class TypeChecker:
 
         if node.global_expression:
             self.visit(node.global_expression, scope.create_child_scope())
+
+            if node.return_type in [UnknownType(), UndefinedType()]:
+                self.error("It was not possible to infer type of global expression")
         else:
             self.error(f"No global expression")
 
@@ -52,6 +55,8 @@ class TypeChecker:
 
         for arg in declaration.arguments:
             self.visit(arg, scope)
+            if arg.inferred_type in [UnknownType(), UndefinedType()]:
+                self.error("It was not possible to infer type argument", line=declaration.id.line)
 
         success, parent = self.context.get_type(declaration.id.lex)
 
@@ -97,6 +102,9 @@ class TypeChecker:
 
         for attribute_declaration in declaration.attributes:
             self.visit(attribute_declaration.expression, attribute_scope)
+
+            if attribute_declaration.expression.inferred_type in [UnknownType(), UndefinedType()]:
+                self.error(f"It was not possible to infer the type for attribute", line=attribute_declaration.id.line)
 
         for method_declaration in declaration.methods:
             self.visit(method_declaration, scope)
@@ -162,6 +170,8 @@ class TypeChecker:
             self.visit(param, scope)
 
         self.visit(function_declaration.body, new_scope)
+        if function_declaration.inferred_type in [UnknownType(), UndefinedType()]:
+            self.error(f"It was not possible to infer the type for function body", token=function_declaration.id)
 
         if function_declaration.type:
 
@@ -216,9 +226,13 @@ class TypeChecker:
                 self.error("`self` is not a valid assignment target", token=assign.id)
         else:
             self.visit(assign.id, scope)
+            if assign.id.inferred_type in [UnknownType(), UndefinedType()]:
+                self.error(f"It was not possible to infer the type for variable")
             declared_type = assign.id.inferred_type
 
         self.visit(assign.expr, scope)
+        if assign.expr.inferred_type in [UnknownType(), UndefinedType()]:
+            self.error(f"It was not possible to infer the type for destructive assignment")
 
         if not assign.inferred_type.conforms_to(declared_type):
             if isinstance(assign.id, Token):
@@ -246,6 +260,9 @@ class TypeChecker:
                 success, method = self.context.get_method(call.token.lex)
         else:
             self.visit(call.obj, scope)
+
+            if call.obj.inferred_type in [UnknownType(), UndefinedType()]:
+                self.error(f"It was not possible to infer the type for the object", token=call.token)
 
             obj_type = call.obj.inferred_type
 
@@ -299,6 +316,9 @@ class TypeChecker:
         self.visit(node.body, scope)
         self.visit(node.else_body, scope)
 
+        if node.inferred_type in [UnknownType(), UndefinedType()]:
+            self.error(f"It was not possible to infer the type for the if body")
+
     @visitor.when(ForNode)
     def visit(self, node: ForNode, scope: Scope):
 
@@ -325,6 +345,9 @@ class TypeChecker:
 
         self.visit(node.body, new_scope)
 
+        if node.body.inferred_type in [UnknownType(), UndefinedType()]:
+            self.error(f"It was not possible to infer the type for the for body", line=node.item_id.line)
+
     @visitor.when(WhileNode)
     def visit(self, node: WhileNode, scope: Scope):
 
@@ -335,14 +358,19 @@ class TypeChecker:
 
         self.visit(node.body, scope)
 
-        if node.else_clause:
-            self.visit(node.else_clause, scope)
+        if node.body.inferred_type in [UnknownType(), UndefinedType()]:
+            self.error(f"It was not possible to infer the type for the while body")
+
+
 
     @visitor.when(BlockNode)
     def visit(self, block: BlockNode, scope: Scope):
 
         for expression in block.body:
             self.visit(expression, scope.create_child_scope())
+
+            if expression.inferred_type in [UnknownType(), UndefinedType()]:
+                self.error(f"It was not possible to infer the type for the block expression")
 
     @visitor.when(LetNode)
     def visit(self, node: LetNode, scope: Scope):
@@ -356,6 +384,9 @@ class TypeChecker:
             new_scope = new_scope.create_child_scope()
 
         self.visit(node.body, new_scope)
+
+        if node.body.inferred_type in [UnknownType(), UndefinedType()]:
+            self.error(f"It was not possible to infer the type for the let body")
 
     @visitor.when(InstantiateNode)
     def visit(self, node: InstantiateNode, scope: Scope):
@@ -388,6 +419,9 @@ class TypeChecker:
 
         self.visit(node.left, scope)
 
+        if node.left.inferred_type in [UnknownType(), UndefinedType()]:
+            self.error(f"It was not possible to infer the type for left operator")
+
         if isinstance(node, AsNode) or isinstance(node, IsNode):
 
             if not isinstance(node.right, Token):
@@ -397,8 +431,17 @@ class TypeChecker:
 
                 if not success:
                     self.error(f"Invalid type {node.right.lex}", token=node.right)
+                    return
+
+                if not declared_type.conforms_to(node.left.inferred_type):
+                    self.error(f"You can not cast from {node.left.inferred_type} to {declared_type}")
+
+            return
 
         self.visit(node.right, scope)
+
+        if node.right.inferred_type in [UnknownType(), UndefinedType()]:
+            self.error(f"It was not possible to infer the type for left operator")
 
         if (isinstance(node, PlusNode) or isinstance(node, MinusNode) or isinstance(node, DivNode)
                 or isinstance(node, StarNode) or isinstance(node, PowerNode)):
