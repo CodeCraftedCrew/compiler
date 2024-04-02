@@ -3,7 +3,7 @@
     max = max;
     current = min - 1;
 
-    next(): Boolean => (self.current := self.current + 1) < max;
+    next(): Boolean => (self.current := self.current + 1) < self.max;
     current(): Number => self.current;
 }
 

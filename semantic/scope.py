@@ -1,11 +1,13 @@
 import itertools as itl
+import math
 
-from semantic.types import UnknownType, NumberType, StringType, IterableType
+from semantic.types import UnknownType, NumberType, StringType, IterableType, Type
 
 
 class VariableInfo:
-    def __init__(self, name, declared_type=None, inferred_type=None):
+    def __init__(self, name, declared_type=None, inferred_type=None, value=None):
         self.name = name
+        self.value = value
         self.type = declared_type
         self.inferred_type = inferred_type or UnknownType()
 
@@ -16,6 +18,15 @@ class FunctionInfo:
         self.params = params
         self.type = return_type
         self.inferred_type = UnknownType()
+
+
+class InstanceInfo:
+    def __init__(self, typex, param_names, param_values, attributes, parent: Type):
+        self.type = typex
+        self.param_names = param_names
+        self.param_values = param_values
+        self.attributes = attributes
+        self.parent = parent
 
 
 class Scope:
@@ -29,20 +40,20 @@ class Scope:
 
     def add_builtin(self):
         global_variables = {
-            "PI": NumberType(),
-            "E": NumberType()
+            "PI": (NumberType(), math.pi),
+            "E": (NumberType(), math.e)
         }
 
-        for name, declared_type in global_variables.items():
-            self.define_variable(name, declared_type)
+        for name, (declared_type, value) in global_variables.items():
+            self.define_variable(name, declared_type, value=value)
 
     def create_child_scope(self):
         child_scope = Scope(self)
         self.children.append(child_scope)
         return child_scope
 
-    def define_variable(self, variable_name, declared_type=None, inferred_type=None):
-        self.local_vars.append(VariableInfo(variable_name, declared_type, inferred_type))
+    def define_variable(self, variable_name, declared_type=None, inferred_type=None, value=None):
+        self.local_vars.append(VariableInfo(variable_name, declared_type, inferred_type, value))
 
     def update_variable_inferred_type(self, variable_name, inferred_type):
         variable = self.find_variable(variable_name)
@@ -57,7 +68,7 @@ class Scope:
 
     def define_function(self, function_name, params, return_type=None):
         self.local_funcs.append(FunctionInfo(function_name, params, return_type))
-        
+
     def update_function_inferred_type(self, function_name, inferred_type):
         function = self.find_function(function_name)
 

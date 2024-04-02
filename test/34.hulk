@@ -5,8 +5,8 @@ type Point(x,y) {
     getX() => self.x;
     getY() => self.y;
 
-    setX(x) => self.x := x;
-    setY(y) => self.y := y;
+    setX(x: Number) => self.x := x;
+    setY(y: Number) => self.y := y;
 }
 
 type PolarPoint inherits Point {

@@ -1,4 +1,7 @@
-let iterable = range(0, 10) in
-    while (iterable.next())
-        let x = iterable.current() in
-            print(x);
+let rand = rand(), i = 0 in
+    while (i < 5){
+        print(rand);
+        rand := rand();
+        i := i + 1;
+    }
+        

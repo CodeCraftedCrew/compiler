@@ -3,6 +3,7 @@ from pathlib import Path
 
 from errors.error import Error
 from evaluation.evaluation import evaluate_reverse_parse
+from interpreter.interpreter import Interpreter
 from language.hulk import get_hulk_grammar
 from lexer.lexer import Lexer
 from lexer.pattern import get_patterns
@@ -21,6 +22,8 @@ def handle_args():
     return args.path.split('=')[1]
 
 
+
+
 def main():
     path = Path(handle_args())
 
@@ -36,40 +39,81 @@ def main():
 
     parser = LR1Parser(grammar, src_path / 'cache/hulk')
 
-    for i in range(1, 45):
-        with open(src_path / f'test/{i}.hulk', 'r') as f:
+    if path.exists():
+        with open(path, 'r') as f:
             program = f.read()
 
-        try:
-            tokens = lexer(program)
-            terminals = [mapping.get(token.token_type) for token in tokens]
+            try:
+                tokens = lexer(program)
+                terminals = [mapping.get(token.token_type) for token in tokens]
 
-            parsed, operations = parser(terminals)
+                parsed, operations = parser(terminals)
 
-            ast = evaluate_reverse_parse(parsed, operations, tokens[:-1] + [grammar.EOF])
+                ast = evaluate_reverse_parse(parsed, operations, tokens[:-1] + [grammar.EOF])
 
-        except Exception as e:
-            print(e)
-            continue
+            except Exception as e:
+                print(e)
+                return
 
-        error = Error(program)
+            error = Error(program)
 
-        collector = TypeCollector(error)
-        collector.visit(ast)
+            collector = TypeCollector(error)
+            collector.visit(ast)
 
-        builder = TypeBuilder(collector.context, error)
-        builder.visit(ast)
+            builder = TypeBuilder(collector.context, error)
+            builder.visit(ast)
 
-        inference = TypeInference(builder.context, error)
-        inference.visit(ast)
+            inference = TypeInference(builder.context, error)
+            inference.visit(ast)
 
-        checker = TypeChecker(builder.context, error)
-        checker.visit(ast)
+            checker = TypeChecker(builder.context, error)
+            checker.visit(ast)
 
-        if error.errors:
-            continue
+            if error.errors:
+                return
 
-        print(f"finish {i}")
+            interpreter = Interpreter(checker.context, error)
+            interpreter.visit(ast)
+
+    else:
+
+        for i in range(1, 45):
+            with open(src_path / f'test/{i}.hulk', 'r') as f:
+                program = f.read()
+
+            try:
+                tokens = lexer(program)
+                terminals = [mapping.get(token.token_type) for token in tokens]
+
+                parsed, operations = parser(terminals)
+
+                ast = evaluate_reverse_parse(parsed, operations, tokens[:-1] + [grammar.EOF])
+
+            except Exception as e:
+                print(e)
+                continue
+
+            error = Error(program)
+
+            collector = TypeCollector(error)
+            collector.visit(ast)
+
+            builder = TypeBuilder(collector.context, error)
+            builder.visit(ast)
+
+            inference = TypeInference(builder.context, error)
+            inference.visit(ast)
+
+            checker = TypeChecker(builder.context, error)
+            checker.visit(ast)
+
+            if error.errors:
+                continue
+
+            interpreter = Interpreter(checker.context, error)
+            interpreter.visit(ast)
+
+            print(f"finish {i}")
 
 
 if __name__ == '__main__':
