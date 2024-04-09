@@ -1,14 +1,14 @@
-# compiler
+# Compiler
 
-Nahomi Bouza Rodriguec C412
-Yisell Martinez Noa C412
-Lauren Peraza Garcia C311
+Nahomi Bouza Rodríguez C412
+Yisell Martínez Noa C412
+Lauren Peraza García C311
 
 ## Lexer
 
 ### Inicialización
 
-Necesitamos definir primero que es un "token pattern" en nuestro proyecto. Un "token pattern" se define como una clase que encapsula un patrón expresado en una expresión regular, específicamente para un tipo de token determinado.
+Necesitamos definir primero qué es un "token pattern" en nuestro proyecto. Un "token pattern" se define como una clase que encapsula un patrón expresado en una expresión regular, específicamente para un tipo de token determinado.
 
 Nuestro analizador léxico, recibe como parámetros la lista de "token patterns", el símbolo que indica el final del archivo (EOF) y la ruta al autómata en caché (que podría ser nula).
 
@@ -22,11 +22,11 @@ El autómata del analizador léxico consiste en la unión de los autómatas de c
 
 La construcción de los autómatas para los "patterns" se lleva a cabo siguiendo una lógica específica.
 
-1. La expresión regular correspondiente al patrón se tokeniza para dividirla en dígitos, símbolos, letras o caracteres especiales (utilizados en el motor de expresiones regulares)
+1. La expresión regular correspondiente al patrón se tokeniza para dividirla en dígitos, símbolos, letras o caracteres especiales (utilizados en el motor de expresiones regulares).
 2. Se procede a analizar sintácticamente la expresión utilizando el parser LR(1), el cual será explicado detalladamente más adelante. Aunque reconocemos que un parser LL(1) podría haber sido más apropiado en este contexto, optamos por LR(1) debido a su implementación previa como parte del parser de nuestro proyecto.
 3. Se sustituyen los terminales digit, letter y symbol por los caracteres reales provenientes de la expresión regular.
 4. Utilizando el método evaluate_reverse_parse, se construye el Árbol de Sintaxis Abstracta (AST).
-5. Se evalua el AST y el autómata resultante se convierte a su forma determinista, asegurando así que el analizador léxico pueda operar eficientemente en la identificación y clasificación de tokens dentro del texto proporcionado.
+5. Se evalúa el AST y el autómata resultante se convierte a su forma determinista, asegurando así que el analizador léxico pueda operar eficientemente en la identificación y clasificación de tokens dentro del texto proporcionado.
 
 El análisis gramatical utilizado para interpretar cada una de las expresiones regulares se expone a continuación:
 
@@ -37,7 +37,7 @@ El análisis gramatical utilizado para interpretar cada una de las expresiones r
 
 ```
 
-UnionNode: se encarga de crear un nuevo automata que consiste en un nuevo estado inicial que tiene una epsilon transicion a cada uno de los estados iniciales de los automatas unidos y un nuevo estado final al que se llega tambie con una epsilon transicion de los de estados finales de los automatas que une.
+UnionNode: Se encarga de crear un nuevo autómata que consiste en un nuevo estado inicial que tiene una épsilon transición a cada uno de los estados iniciales de los autómatas unidos y un nuevo estado final al que se llega también con una épsilon transición de los estados finales de los autómatas que une.
 
 La clase `UnionNode` realiza la operación de unión, según lo descrito en la clase práctica, utilizando los autómatas de entrada.
 
@@ -60,7 +60,7 @@ ClosureNode: Implementa la operación de clausura, permitiendo que el autómata 
 
 PlusNode: Similar a la clausura, pero requiere al menos una ocurrencia del patrón para que el autómata lo acepte.
 
-QuestionNode: Añade un estado inicial con una transición epsilon al estado final del autómata original, permitiendo cero o una ocurrencia del patrón original en el texto reconocido.
+QuestionNode: Añade un estado inicial con una transición épsilon al estado final del autómata original, permitiendo cero o una ocurrencia del patrón original en el texto reconocido.
 
 ``` python
     repeated_item %= open_parenthesis + regular_expression + close_parenthesis, lambda h, s: s[2]
@@ -103,9 +103,9 @@ OrdNode: Asigna a un caracter un valor numérico correspondiente.
 
 La primera acción consiste en inicializar las variables de línea, columna y el punto de referencia en el programa. Posteriormente, se invoca al método "walk" con el texto y la posición actual.
 
-Este método procede a recorrer el programa carácter a carácter, buscando transiciones válidas en el autómata del analizador léxico. Cuando ya no encuentra más transiciones válidas, devuelve el fragmento reconocido del texto y el estado final alcanzado, en caso de haberlo.
+Este método procede a recorrer el programa caracter a caracter, buscando transiciones válidas en el autómata del analizador léxico. Cuando ya no encuentra más transiciones válidas, devuelve el fragmento reconocido del texto y el estado final alcanzado, en caso de haberlo.
 
-Si el "walk" finaliza sin haber alcanzado ningún estado final, se genera un error, indicando que ningún patrón válido ha sido reconocido, y se dej de analizar hasta el siguiente ";" que se encuentre, donde se retoma el reconocimiento, con el fin de detectar más errores potenciales.
+Si el "walk" finaliza sin haber alcanzado ningún estado final, se genera un error, indicando que ningún patrón válido ha sido reconocido, y se deja de analizar hasta el siguiente ";" que se encuentre, donde se retoma el reconocimiento, con el fin de detectar más errores potenciales.
 
 En caso de haber alcanzado un estado final, el punto de referencia se mueve según la longitud del token reconocido. Si el token representa un salto de línea, tabulación o espacio en blanco, se actualizan las variables de línea y columna en consecuencia. De lo contrario, el token reconocido, junto con su posición en línea y columna, se retorna utilizando "yield", y este proceso continúa hasta que se analiza el programa completo.
 
@@ -121,7 +121,7 @@ El proceso de generación de estas tablas está determinado por el tipo de parse
 
 Para construir este autómata, primero necesitamos calcular los conjuntos FIRST de todos los símbolos de la gramática. Luego, procedemos a calcular cada uno de los estados del autómata basado en la colección LR(0) y los conjuntos FIRST de la siguiente manera:
 
-Por cada Item, empezando por el $I_0$, que se determina a partir de la produccion inicial que se añadio cuando se aumento lo gramatica, se halla su clausura.
+Por cada Ítem, empezando por el $I_0$, que se determina a partir de la producción inicial que se añadió cuando se aumentó la gramática, se halla su clausura.
 
 La clausura se determina expandiendo cada ítem de la clausura actual hasta que no haya más cambios. Luego, con la operación de compresión, eliminamos los ítems repetidos, ya que algunas producciones podrían agregarse, con el mismo centro, a partir de otras producciones una o más veces.
 
@@ -145,15 +145,169 @@ Por cada token en la lista de tokens, intentamos buscar en la tabla de acción (
 
 1. Si la acción es un SHIFT, se añade el símbolo terminal actual (lookahead) y el nuevo estado a la pila.
 2. Si la acción es una reducción (REDUCE), entonces por cada símbolo en el cuerpo de la producción a la que se reduce, se sacan dos elementos de la pila: el estado y el símbolo terminal (lookahead). Luego, se procede a calcular el conjunto GOTO a partir del símbolo no terminal en la cabeza de la producción y se añaden tanto este símbolo como el nuevo estado a la pila.
-3. Si la acción es ACCEPTED, en cuyo caso nos aseguramos de que en la pila solo quede el símbolo inicial de la gramática y finalizamos el proceso de análisis sintáctico, devolviendo todas las reducciones y acciones realizadas para construir el árbol de sintaxis abstracta (AST).
+3. Si la acción es ACCEPTED, nos aseguramos de que en la pila solo quede el símbolo inicial de la gramática y finalizamos el proceso de análisis sintáctico, devolviendo todas las reducciones y acciones realizadas para construir el árbol de sintaxis abstracta (AST).
 
 En caso de no ser ninguno de estos tres tipos de acciones, se lanza una excepción debido a que se ha encontrado un tipo de acción desconocido en la tabla.
 
-Si no se encuentra la coinicidencia significa que el token no es válido en la secuencia y por tanto entramos en `Panic Mode` para intentar recuperarnos del error.
+Si no se encuentra la coincidencia significa que el token no es válido en la secuencia y por tanto entramos en `Panic Mode` para intentar recuperarnos del error.
 
-Escaneamos hacia abajo en la pila hasta que se encuentre un estado s con un "goto" en un determinado no terminal A. Luego, se descartan cero o más símbolos de entrada hasta que se encuentre un símbolo a que pueda seguir legítimamente a A. El analizador entonces apila el estado GOTO(s, A) y reanuda el análisis normal. Si no se cumplen ninguna de las condiciones anteriores de termina el análisis sintáctico.
+Escaneamos hacia abajo en la pila hasta que se encuentre un estado s con un "goto" en un determinado no terminal A. Luego, se descartan cero o más símbolos de entrada hasta que se encuentre un símbolo a que pueda seguir legítimamente a A. El analizador entonces apila el estado GOTO(s, A) y reanuda el análisis normal. Si no se cumplen ninguna de las condiciones anteriores se termina el análisis sintáctico.
 
 Este proceso de análisis sintáctico continúa hasta que se agote la lista de tokens o se alcance un estado de aceptación. Si en algún momento se detecta un error en la entrada, se maneja adecuadamente y se avanza en la entrada hasta el siguiente punto de sincronización, generalmente un ";" en este caso.
+
+### Estructura de la gramática
+
+La gramática de Hulk se compone de varios elementos clave que permiten definir la sintaxis del lenguaje. A continuación, se detallan los componentes principales de la gramática:
+
+#### No Terminales: 
+Representan elementos sintácticos que pueden ser descompuestos en otros elementos hasta llegar a los terminales.
+
+program: Es el nodo raíz, representa todo el programa.
+
+head_program: Representa el encabezado de un programa en Hulk.
+
+define_statement: Representa la declaración de funciones, de tipos y de protocolos.
+
+statement: Representa el punto de entrada al programa. Puede ser una instrucción individual en el código Hulk o un bloque de instrucciones.
+
+block: Representa un bloque de código delimitado por llaves ({}), que puede contener una secuencia de instrucciones. También puede ser un if, while, for o declaración de variables que contenga al final un bloque.
+
+non_block: Representa una instrucción que no está dentro de un bloque. También puede ser un if, while, for o declaración de variables que no contenga al final un bloque.
+
+if_statement_block: Representa un condicional "if" que contiene un bloque al final.
+
+while_statement_block: Representa un bucle "while" que contiene un bloque al final.
+
+for_statement_block: Representa un bucle "for" que contiene un bloque al final.
+
+declaration_expression_block: Representa una declaración de variables que contiene un bloque al final.
+
+elif_statement_block: Representa un condicional "elif" que contiene un bloque al final.
+
+optional_semicolon: Representa la posibilidad de un punto y coma opcional al final de un bloque.
+
+block_body: Representa el cuerpo de un bloque, que consiste en una lista de instrucciones.
+
+statement_list: Representa una lista de instrucciones.
+
+if_statement: Define una estructura de control condicional "if" con "else" en Hulk, que puede incluir declaraciones "elif". No contiene un bloque al final.
+
+elif_statement: Define una estructura de control condicional "elif" en Hulk.
+
+while_statement: Define una estructura de control de bucle "while" en Hulk. No contiene un bloque al final.
+
+for_statement: Define una estructura de control de bucle "for" en Hulk. No contiene un bloque al final.
+
+declaration_expression: Representa una expresión que declara una variable en Hulk. No contiene un bloque al final.
+
+type_declaration: Representa la declaración de un tipo de variable en Hulk.
+
+multiple_declaration: Representa una declaración de múltiples variables en Hulk.
+
+expression: Representa una expresión en Hulk, que puede ser una expresión aritmética, una invocación de función, una asignación, etc.
+
+assignment: Representa una asignación de valor a una variable en Hulk.
+
+or_expression: Representa una expresión lógica "or" en Hulk.
+
+and_expression: Representa una expresión lógica "and" en Hulk.
+
+equality_expression: Representa una expresión de igualdad en Hulk.
+
+relational_expression: Representa una expresión relacional en Hulk.
+
+mod_expression: Representa una expresión que realiza una operación de módulo en Hulk.
+
+add_expression: Representa una expresión que realiza una operación de suma, resta o concatenación en Hulk.
+
+mult_expression: Representa una expresión que realiza una operación de multiplicación o división en Hulk.
+
+exponential_expression: Representa una expresión que realiza una operación de potencia en Hulk.
+
+unary_expression: Representa una expresión que involucra operadores unarios en Hulk, como el operador de negación o el operador de signo.
+
+primary_expression: Representa una expresión primaria en Hulk, que puede ser un literal, una variable, una invocación de función, un vector, una indexación, un acceso a miembros, una instanciación o llamar a una expresión dentro de paréntesis.
+
+literal: Representa un valor literal en Hulk, como un número, una cadena o un valor booleano.
+
+invocation_expression: Representa una expresión que invoca una función.
+
+arguments: Representa los argumentos pasados a una función.
+
+argument_list: Representa una lista de argumentos en Hulk.
+
+vector: Representa una estructura de datos de vector en Hulk.
+
+vector_element: Representa un elemento dentro de un vector en Hulk.
+
+index: Representa una expresión que accede a un elemento dentro de un vector en Hulk.
+
+member_access: Representa una expresión que accede a un miembro de una estructura en Hulk.
+
+instantiation: Representa la instanciación de un objeto en Hulk.
+
+function_definition: Define la estructura y el comportamiento de una función en Hulk.
+
+arguments_definition: Representa la definición de los argumentos de una función.
+
+argument_list_definition: Representa una lista de definiciones de argumentos en Hulk.
+
+type_definition: Define la estructura de un tipo en Hulk, que puede incluir atributos y métodos.
+
+type_arguments: Representa los argumentos utilizados en la definición de un tipo en Hulk.
+
+type_inherits: Representa la declaración de herencia de un tipo en Hulk.
+
+inherits_declaration: Representa la declaración de argumentos de los tipos de los cuales se hereda.
+
+type_body: Representa el cuerpo de un tipo en Hulk, que puede incluir definiciones de atributos y métodos.
+
+type_element: Representa un elemento dentro del cuerpo de un tipo en Hulk.
+
+attribute_definition: Define la declaración de un atributo en Hulk.
+
+protocol_definition: Define la estructura y los requisitos de un protocolo en Hulk.
+
+extends_definition: Define la extensión de un tipo en Hulk.
+
+extends_multiple_identifier: Representa múltiples identificadores extendidos en una declaración en Hulk.
+
+protocol_body: Representa el cuerpo de un protocolo en Hulk, que contiene las definiciones de los métodos requeridos por el protocolo.
+
+protocol_arguments_definition: Representa la definición de los argumentos requeridos por un protocolo en Hulk.
+
+protocol_multiple_arguments_definition: Representa múltiples definiciones de argumentos en un protocolo.
+
+
+#### Terminales: 
+Son los elementos básicos del lenguaje, como palabras clave, operadores, separadores, identificadores y literales. 
+
+Palabras clave: Son palabras reservadas que tienen un significado específico en el lenguaje. Incluyen function, let, in, if, elif, else, while, for, type, new, inherits, is, as, protocol, extends, true, false.
+
+Identificadores: Son nombres definidos por el usuario para variables, funciones, tipos y protocolos.
+
+Operadores: Son símbolos utilizados para realizar operaciones sobre valores. Incluyen operadores aritméticos (+, -, *, /, **, ^, %), operadores relacionales (<, >, <=, >=, ==, !=), operadores lógicos (&, |, !), operadores de asignación (=, :=), operador de funciones inline '=>', operador de acceso a miembros '.', operador de comprensión de listas '||' y operadores de concatenación (@, @@).
+
+Separadores: Son símbolos utilizados para separar partes del código. Incluyen comas ',', punto y coma ';', llaves '{', '}', corchetes '[', ']', paréntesis '(', ')', dos puntos ':'.
+Literales: Son representaciones de valores constantes. Incluyen números, cadenas y booleanos.
+
+#### Reglas de producción: 
+Establecen cómo se pueden combinar los no terminales y terminales para formar expresiones válidas en el lenguaje. Estas reglas definen la estructura gramatical del lenguaje y cómo se pueden realizar las operaciones y declaraciones en el código Hulk.
+
+#### Funcionalidades Clave
+
+La gramática de Hulk permite expresiones y operaciones típicas de un lenguaje de programación, incluyendo:
+
+- Declaración y asignación de variables.
+- Estructuras de control como condicionales (if, else, elif), bucles (while, for) y bloques de código.
+- Definición y llamado de funciones.
+- Manipulación de vectores y acceso a miembros.
+- Definición de tipos y protocolos.
+- Herencia, extensiones de tipos y polimorfismo.
+
+La gramática de Hulk se implementa utilizando un enfoque de análisis sintáctico ascendente, donde se construye un AST a partir de la entrada del programa. Hay reglas de producción en la gramática que se traducen en funciones que construyen nodos del AST, lo que facilita la posterior interpretación y ejecución de las expresiones y declaraciones. Por ejemplo, una declaración de función se traduce en un nodo FunctionDeclarationNode, mientras que una expresión aritmética se puede traducir en nodos como PlusNode, MinusNode, etc.
+
+La gramática presentada proporciona una base sólida para el diseño e implementación del lenguaje de programación Hulk. Permite expresar una amplia gama de operaciones y estructuras de control de manera clara y concisa, facilitando el desarrollo de programas complejos. La generación de AST a partir de esta gramática permite una interpretación eficiente y precisa de los programas escritos en Hulk.
 
 ## Análisis Semántico
 
@@ -167,7 +321,7 @@ En esta etapa, se visitan únicamente los nodos Program, TypeDeclaration y Proto
 
 ### Builder
 
-Mediante el contexto obtenido del colector, se procede a visitar los nodos Program, TypeDeclaration, ProtocolDeclaration, AttributeDeclaration, FunctionDeclaration y ParameterDeclaration. Durante esta etapa, se verifica una serie de aspectos cruciales:
+Mediante el contexto obtenido del collector, se procede a visitar los nodos Program, TypeDeclaration, ProtocolDeclaration, AttributeDeclaration, FunctionDeclaration y ParameterDeclaration. Durante esta etapa, se verifica una serie de aspectos cruciales:
 
 - TypeDeclaration: Se definen los parámetros, atributos y métodos asociados al tipo. Además, se gestiona la herencia, generando un registro de error en caso de detectarse una herencia cíclica.
 
