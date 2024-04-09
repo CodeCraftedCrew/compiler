@@ -1,7 +1,9 @@
 # Compiler
 
 Nahomi Bouza Rodríguez C412
+
 Yisell Martínez Noa C412
+
 Lauren Peraza García C311
 
 ## Lexer
@@ -292,7 +294,18 @@ Separadores: Son símbolos utilizados para separar partes del código. Incluyen 
 Literales: Son representaciones de valores constantes. Incluyen números, cadenas y booleanos.
 
 #### Reglas de producción: 
-Establecen cómo se pueden combinar los no terminales y terminales para formar expresiones válidas en el lenguaje. Estas reglas definen la estructura gramatical del lenguaje y cómo se pueden realizar las operaciones y declaraciones en el código Hulk.
+Establecen cómo se pueden combinar los no terminales y terminales para formar expresiones válidas en el lenguaje. Estas reglas definen la estructura gramatical del lenguaje y cómo se pueden realizar las operaciones y declaraciones en el código Hulk. Ejemplo:
+
+``` python
+    program %= head_program + statement, lambda h, s: ProgramNode(s[1], s[2])
+    program %= head_program, lambda h, s: ProgramNode(s[1], [])
+    program %= statement, lambda h, s: ProgramNode([], s[1])
+```
+``` python
+    mult_expression %= mult_expression + multiply + exponential_expression, lambda h, s: StarNode(s[1], s[3])
+    mult_expression %= mult_expression + divide + exponential_expression, lambda h, s: DivNode(s[1], s[3])
+    mult_expression %= exponential_expression, lambda h, s: s[1]
+```
 
 #### Funcionalidades Clave
 
@@ -351,6 +364,29 @@ Si el tipo inferido es "UndefinedType", se imprime un error correspondiente. Igu
 
 Este proceso garantiza la coherencia entre los tipos inferidos y los tipos declarados en el programa, identificando posibles discrepancias y proporcionando información detallada sobre los errores encontrados.
 
-## Interprete de Árbol
+## Intérprete de Árbol
 
 Por cada nodo del árbol realizamos la acción correspondiente, como es el caso de las operaciones binarias. En la mayoría de los casos estas implementaciones son triviales, pero hay algunas que por su importancia nos gustaría explicar.
+
+El ProgramNode sirve como punto de entrada para la ejecución. Se invoca el método visit del interpretador en este nodo, lo que desencadena un recorrido recursivo de todo el AST.
+
+Para cada nodo visitado, se llama al método visit correspondiente. Estos métodos manejan la lógica específica requerida para cada tipo de nodo, como evaluar expresiones, asignar valores a variables, ejecutar sentencias de flujo de control e invocar funciones.
+
+Expresiones: Las expresiones se evalúan según su tipo (aritmético, lógico, comparaciones, etc.). Las funciones integradas como print, las funciones math y range se resuelven mediante el diccionario built_in_functions.
+
+Declaración de variables: Se definen nuevas variables dentro del ámbito actual y sus valores se asignan a través de expresiones.
+
+Sentencias de flujo de control (if, while, for): Se evalúan las condiciones y se ejecutan los bloques de código adecuados según el resultado. Los bucles se gestionan mediante ámbitos secundarios y condiciones de bucle.
+
+Llamadas a funciones: Se consulta la tabla de símbolos para localizar la definición de la función. Se evalúan los argumentos, se crea un nuevo ámbito secundario para los parámetros de la función y las variables locales, y el cuerpo de la función se ejecuta dentro de este ámbito. Se emplea el mecanismo de resolución del método base para las llamadas al método base dentro de una clase.
+
+Declaración de tipo: Busca el tipo en el contexto. Si el tipo existe, se almacena la información de los parámetros del constructor en la tabla de símbolos. Si hereda de otro tipo, se guarda la información de la herencia en la tabla de símbolos. Recorre los atributos y métodos definidos en la declaración del tipo:
+Los atributos se almacenan en la tabla de símbolos con su expresión correspondiente.
+Los métodos se almacenan en la tabla de símbolos con la lista de parámetros y el cuerpo del método.
+
+Declaración de protocolo: Recorre los métodos declarados en el protocolo. Para cada método, se guarda en la tabla de símbolos la lista de parámetros y el cuerpo del método, asociados al nombre del protocolo y método.
+
+Declaración de función: Almacena en la tabla de símbolos el nombre de la función, la lista de parámetros y el cuerpo de la función.
+
+Vectores: Si tiene elementos definidos, evalúa cada elemento y retorna la lista de valores. Si tiene un iterador, verifica si es una llamada a la función range o una lista existente. Recorre los elementos del iterador y para cada elemento:
+Crea un nuevo ámbito hijo. Define una variable con el nombre del elemento iterado y su valor actual. Evalúa el generador del VectorNode en el nuevo ámbito. Agrega el resultado de la evaluación del generador a la lista final. Si no tiene elementos ni iterador, retorna un valor nulo (NullType).
