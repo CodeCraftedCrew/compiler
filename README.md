@@ -6,11 +6,21 @@ Yisell Martínez Noa C412
 
 Lauren Peraza García C311
 
+## Como ejecutar el proyecto
+
+Tenemos dos opciones, la primera es abrir una consola en la raiz del proyecto y ejecutar el siguiente comando, donde file es el path del arhivo que se quiere ejecutar
+
+```shell
+python main.py path={file}
+```
+
+Si no se provee ningún path o este no es válido, entonces se ejecutan 44 test programados que se pueden ver en la carpeta [test](https://github.com/CodeCraftedCrew/compiler/tree/main/test) en la raíz del proyecto.
+
 ## Lexer
 
-### Inicialización
+### [Inicialización](https://github.com/CodeCraftedCrew/compiler/blob/662906f5f19830e58bf5589d5aafc42a0cfdf969/lexer/lexer.py#L13)
 
-Necesitamos definir primero qué es un "token pattern" en nuestro proyecto. Se define como una clase que encapsula un patrón expresado en una expresión regular, específicamente para un tipo de token determinado.
+Necesitamos definir primero qué es un ["token pattern"](https://github.com/CodeCraftedCrew/compiler/blob/main/lexer/pattern.py) en nuestro proyecto. Se define como una clase que encapsula un patrón expresado en una expresión regular, específicamente para un tipo de token determinado.
 
 Nuestro analizador léxico, recibe como parámetros la lista de "token patterns", el símbolo que indica el final del archivo (EOF) y la ruta al autómata en caché (que podría ser nula).
 
@@ -22,7 +32,7 @@ Si la ruta es válida y el autómata en caché corresponde al autómata esperado
 
 El autómata del analizador léxico consiste en la **unión de los autómatas de cada uno de los "token patterns"** pasados como parámetros. Esta unión es convertida a determinista utilizando el método provisto en clase práctica.
 
-La construcción de los autómatas para los "patterns" se lleva a cabo siguiendo una lógica específica.
+La construcción de los autómatas para los "patterns" se lleva a cabo siguiendo una [lógica específica](https://github.com/CodeCraftedCrew/compiler/blob/662906f5f19830e58bf5589d5aafc42a0cfdf969/lexer/regex.py#L5).
 
 1. La expresión regular correspondiente al patrón se tokeniza para dividirla en dígitos, símbolos, letras o caracteres especiales (utilizados en el motor de expresiones regulares).
 2. Se procede a analizar sintácticamente la expresión utilizando el parser LR(1), el cual será explicado detalladamente más adelante. Aunque reconocemos que un parser LL(1) podría haber sido más apropiado en este contexto, optamos por LR(1) debido a su implementación previa como parte del parser de nuestro proyecto.
@@ -99,7 +109,9 @@ Las clases `LetterNode`, `DigitNode`, `AlphanumericNode` y `SymbolNode` generan 
 
 **OrdNode:** Asigna a un caracter un valor numérico correspondiente.
 
-### Tokenización
+Podemos encontrar todos los nodos en el archivo [lexer.py](https://github.com/CodeCraftedCrew/compiler/blob/main/ast_nodes/lexer.py)
+
+### [Tokenización](https://github.com/CodeCraftedCrew/compiler/blob/662906f5f19830e58bf5589d5aafc42a0cfdf969/lexer/lexer.py#L77)
 
 La primera acción consiste en inicializar las variables de línea, columna y el punto de referencia en el programa. Posteriormente, se invoca al método "walk" con el texto y la posición actual.
 
@@ -111,13 +123,13 @@ En caso de haber alcanzado un estado final, el punto de referencia se mueve seg�
 
 ## Parser
 
-### Inicializacion
+### [Inicialización](https://github.com/CodeCraftedCrew/compiler/blob/662906f5f19830e58bf5589d5aafc42a0cfdf969/parser/lr.py#L19)
 
 Nuestro parser recibe como parámetros la gramática y la ruta donde podría estar almacenada la caché de las tablas de acción y desplazamiento (action y goto) correspondientes. Si la ruta es válida y coincide con la gramática proporcionada, las tablas se cargan desde la caché. De lo contrario, si la ruta no es válida o no coincide con la gramática, se generan y almacenan estas tablas en la ruta especificada, siempre y cuando esta sea válida.
 
 El proceso de generación de estas tablas está determinado por el tipo de parser LR que se haya implementado. En nuestro caso, hemos optado por el parser LR(1). En primer lugar, partiendo de la gramática aumentada, se obtiene su autómata correspondiente. Este autómata representa de manera formal los estados y las transiciones posibles del parser LR(1) para la gramática dada.
 
-#### Autómata
+#### [Autómata](https://github.com/CodeCraftedCrew/compiler/blob/662906f5f19830e58bf5589d5aafc42a0cfdf969/parser/lr1.py#L63)
 
 Para construir este autómata, primero necesitamos calcular los conjuntos FIRST de todos los símbolos de la gramática. Luego, procedemos a calcular cada uno de los estados del autómata basado en la colección LR(0) y los conjuntos FIRST de la siguiente manera:
 
@@ -137,7 +149,7 @@ Al finalizar este proceso, la tabla de análisis sintáctico LR(1) está complet
 
 Durante la creación de la tabla de análisis sintáctico LR(1), es posible que se produzcan conflictos, específicamente Shift-Reduce o Reduce-Reduce, en ciertas posiciones de la tabla.
 
-### Análisis Sintáctico
+### [Análisis Sintáctico](https://github.com/CodeCraftedCrew/compiler/blob/662906f5f19830e58bf5589d5aafc42a0cfdf969/parser/lr.py#L60)
 
 Una vez que tenemos la lista de tokens obtenida del lexer, procedemos a intentar el análisis sintáctico utilizando las tablas obtenidas anteriormente. El procedimiento es el mismo, independientemente del método utilizado para crear las tablas.
 
@@ -155,7 +167,7 @@ Escaneamos hacia abajo en la pila hasta que se encuentre un estado s con un "got
 
 Este proceso de análisis sintáctico continúa hasta que se agote la lista de tokens o se alcance un estado de aceptación. Si en algún momento se detecta un error en la entrada, se maneja adecuadamente y se avanza en la entrada hasta el siguiente punto de sincronización, generalmente un ";" en este caso.
 
-### Estructura de la gramática
+### [Estructura de la gramática](https://github.com/CodeCraftedCrew/compiler/blob/main/language/hulk.py)
 
 La gramática de Hulk se compone de varios elementos clave que permiten definir la sintaxis del lenguaje. A continuación, se detallan los componentes principales de la gramática:
 
@@ -344,11 +356,11 @@ Tras la realización del análisis sintáctico, se emplean los resultados obteni
 
 Nuestro análisis semántico se estructura en varias etapas, que describiremos a continuación:
 
-### Collector
+### [Collector](https://github.com/CodeCraftedCrew/compiler/blob/main/semantic/type_collector.py)
 
 En esta etapa, se visitan únicamente los nodos Program, TypeDeclaration y ProtocolDeclaration con el propósito de añadir al contexto todas las posibles declaraciones de tipos y que más adelante en este análsis no importe el orden en que estos se declararon.
 
-### Builder
+### [Builder](https://github.com/CodeCraftedCrew/compiler/blob/main/semantic/type_builder.py)
 
 Mediante el contexto obtenido del collector, se procede a visitar los nodos Program, TypeDeclaration, ProtocolDeclaration, AttributeDeclaration, FunctionDeclaration y ParameterDeclaration. Durante esta etapa, se verifica una serie de aspectos cruciales:
 
@@ -358,7 +370,7 @@ Mediante el contexto obtenido del collector, se procede a visitar los nodos Prog
 
 - FunctionDeclaration: Se describen las funciones declaradas que no están asociadas a ningún tipo en particular.
 
-### Inference
+### [Inference](https://github.com/CodeCraftedCrew/compiler/blob/main/semantic/type_inference.py)
 
 Utilizando el contexto obtenido del constructor, llevamos a cabo la inferencia de tipos para todas las expresiones, asignando los tipos inferidos a las variables, parámetros, atributos o tipos de retorno que no estén declarados.
 
@@ -370,7 +382,7 @@ Si un tipo se infiere a través de su uso, el tipo inferido será el ancestro m�
 
 En el caso de una expresión cuyo tipo aún no se pueda inferir, se le asigna el tipo especial "UnknownType", que, al igual que "UndefinedType", abarca cualquier tipo. Esta asignación permite que el proceso de inferencia continúe sin interrupciones.
 
-### Checker
+### [Checker](https://github.com/CodeCraftedCrew/compiler/blob/main/semantic/type_checker.py)
 
 Utilizando el contexto obtenido de la inferencia y los tipos inferidos, procedemos a verificar todos los nodos del AST.
 
@@ -380,7 +392,7 @@ Si el tipo inferido es "UndefinedType", se imprime un error correspondiente. Igu
 
 Este proceso garantiza la coherencia entre los tipos inferidos y los tipos declarados en el programa, identificando posibles discrepancias y proporcionando información detallada sobre los errores encontrados.
 
-## Intérprete de Árbol
+## [Intérprete de Árbol](https://github.com/CodeCraftedCrew/compiler/blob/main/interpreter/interpreter.py)
 
 Por cada nodo del árbol realizamos la acción correspondiente. Aunque la implementación de estas acciones suele ser sencilla en la mayoría de los casos, existen algunas que, debido a su relevancia, resulta pertinente explicar un poco más detalladamente.
 
@@ -394,7 +406,7 @@ Por cada nodo del árbol realizamos la acción correspondiente. Aunque la implem
     - Los atributos son almacenados en la tabla de símbolos junto con su expresión correspondiente.
     - Los métodos son registrados en la tabla de símbolos junto con la lista de parámetros y el cuerpo del método.
 
-**Declaración de protocolo:**  En este proceso, se procede a iterar sobre los métodos declarados en el protocolo. Para cada método, se guarda en la tabla de símbolos la lista de parámetros y el cuerpo del método, asociándolos al nombre del protocolo y del método respectivamente. Esta operación es esencial para establecer la estructura y comportamiento esperado de los tipos y protocolos en el sistema, facilitando así su utilización y comprensión en el desarrollo del programa.
+**Declaración de protocolo:** En este proceso, se procede a iterar sobre los métodos declarados en el protocolo. Para cada método, se guarda en la tabla de símbolos la lista de parámetros y el cuerpo del método, asociándolos al nombre del protocolo y del método respectivamente. Esta operación es esencial para establecer la estructura y comportamiento esperado de los tipos y protocolos en el sistema, facilitando así su utilización y comprensión en el desarrollo del programa.
 
 **Declaración de función:** Se almacena en la tabla de símbolos el nombre de la función, la lista de parámetros que espera recibir y el cuerpo de la función, que contiene las instrucciones a ejecutar.
 
