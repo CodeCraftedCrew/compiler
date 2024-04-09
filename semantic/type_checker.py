@@ -408,6 +408,7 @@ class TypeChecker:
                 if len(args) != len(node.params_inferred_type):
                     self.error(f"{parent.name} expects {len(parent.params)} arguments, "
                                f"got {len(node.params_inferred_type)}", line=node.idx.line)
+                    break
 
                 for i in range(len(args)):
                     if not node.params_inferred_type[i].conforms_to(args[i]):

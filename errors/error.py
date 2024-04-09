@@ -25,4 +25,3 @@ class Error:
             self.print_token(token)
         elif line != -1:
             self.print_line(line)
-        exit(1)

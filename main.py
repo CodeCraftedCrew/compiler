@@ -43,8 +43,10 @@ def main():
         with open(path, 'r') as f:
             program = f.read()
 
+            error = Error(program)
+
             try:
-                tokens = lexer(program)
+                tokens = lexer(program, error)
                 terminals = [mapping.get(token.token_type) for token in tokens]
 
                 parsed, operations = parser(terminals)
@@ -54,8 +56,6 @@ def main():
             except Exception as e:
                 print(e)
                 return
-
-            error = Error(program)
 
             collector = TypeCollector(error)
             collector.visit(ast)

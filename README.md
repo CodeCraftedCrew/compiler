@@ -149,6 +149,54 @@ Por cada token en la lista de tokens, intentamos buscar en la tabla de acción (
 
 En caso de no ser ninguno de estos tres tipos de acciones, se lanza una excepción debido a que se ha encontrado un tipo de acción desconocido en la tabla.
 
+Si no se encuentra la coinicidencia significa que el token no es válido en la secuencia y por tanto entramos en `Panic Mode` para intentar recuperarnos del error.
+
+Escaneamos hacia abajo en la pila hasta que se encuentre un estado s con un "goto" en un determinado no terminal A. Luego, se descartan cero o más símbolos de entrada hasta que se encuentre un símbolo a que pueda seguir legítimamente a A. El analizador entonces apila el estado GOTO(s, A) y reanuda el análisis normal. Si no se cumplen ninguna de las condiciones anteriores de termina el análisis sintáctico.
+
 Este proceso de análisis sintáctico continúa hasta que se agote la lista de tokens o se alcance un estado de aceptación. Si en algún momento se detecta un error en la entrada, se maneja adecuadamente y se avanza en la entrada hasta el siguiente punto de sincronización, generalmente un ";" en este caso.
 
 ## Análisis Semántico
+
+Tras la realización del análisis sintáctico, se emplean los resultados obtenidos para, mediante los métodos proporcionados en la clase práctica, derivar el Árbol de Sintaxis Abstracta (AST) del programa en cuestión.
+
+Nuestro análisis semántico se estructura en varias etapas, que describiremos a continuación:
+
+### Collector
+
+En esta etapa, se visitan únicamente los nodos Program, TypeDeclaration y ProtocolDeclaration con el propósito de añadir al contexto todas las posibles declaraciones de tipos y que más adelante en este análsis no importe el orden en que estos se declararon.
+
+### Builder
+
+Mediante el contexto obtenido del colector, se procede a visitar los nodos Program, TypeDeclaration, ProtocolDeclaration, AttributeDeclaration, FunctionDeclaration y ParameterDeclaration. Durante esta etapa, se verifica una serie de aspectos cruciales:
+
+- TypeDeclaration: Se definen los parámetros, atributos y métodos asociados al tipo. Además, se gestiona la herencia, generando un registro de error en caso de detectarse una herencia cíclica.
+
+- ProtocolDeclaration: Se especifican los métodos y se comprueba la extensión. En el caso de que un método coincida en nombre con otro, aunque redundante, se valida que sus parámetros y tipo de retorno sean consistentes.
+
+- FunctionDeclaration: Se describen las funciones declaradas que no están asociadas a ningún tipo en particular.
+
+### Inference
+
+Utilizando el contexto obtenido del constructor, llevamos a cabo la inferencia de tipos para todas las expresiones, asignando los tipos inferidos a las variables, parámetros, atributos o tipos de retorno que no estén declarados.
+
+En este proceso, se recorren todos los nodos del árbol sintáctico abstracto (AST) mientras haya cambios. Es decir, mientras que en una iteración se logre inferir un tipo que previamente era desconocido, se realiza otra iteración, ya que la inferencia de este tipo puede desencadenar la inferencia de otros. Por ejemplo, el uso de una función cuyos parámetros no estén definidos puede ayudar a determinar el tipo de dichos parámetros, lo que a su vez puede permitir definir variables y tipos de retorno en el cuerpo de la función.
+
+Durante estas visitas, si nos encontramos con una variable, método o tipo no definido, se le asigna el tipo especial "UndefinedType", que abarca cualquier tipo, para evitar que este error interrumpa el proceso de inferencia de tipos.
+
+Si un tipo se infiere a través de su uso, el tipo inferido será el ancestro más cercano entre todos los tipos inferidos en cada uso.
+
+En el caso de una expresión cuyo tipo aún no se pueda inferir, se le asigna el tipo especial "UnknownType", que, al igual que "UndefinedType", abarca cualquier tipo. Esta asignación permite que el proceso de inferencia continúe sin interrupciones.
+
+### Checker
+
+Utilizando el contexto obtenido de la inferencia y los tipos inferidos, procedemos a verificar todos los nodos del AST.
+
+Si un nodo tiene un tipo declarado, se verifica que el tipo inferido para la expresión conforme al tipo declarado. En caso de incompatibilidad, se emite un mensaje de error y se continúa con el análisis.
+
+Si el tipo inferido es "UndefinedType", se imprime un error correspondiente. Igualmente, si el tipo inferido es "UnknownType", se informa que no se pudo inferir el tipo de la expresión en cuestión.
+
+Este proceso garantiza la coherencia entre los tipos inferidos y los tipos declarados en el programa, identificando posibles discrepancias y proporcionando información detallada sobre los errores encontrados.
+
+## Interprete de Árbol
+
+Por cada nodo del árbol realizamos la acción correspondiente, como es el caso de las operaciones binarias. En la mayoría de los casos estas implementaciones son triviales, pero hay algunas que por su importancia nos gustaría explicar.
