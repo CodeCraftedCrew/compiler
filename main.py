@@ -22,8 +22,6 @@ def handle_args():
     return args.path.split('=')[1]
 
 
-
-
 def main():
     path = Path(handle_args())
 
@@ -43,8 +41,10 @@ def main():
         with open(path, 'r') as f:
             program = f.read()
 
+            error = Error(program)
+
             try:
-                tokens = lexer(program)
+                tokens = lexer(program, error)
                 terminals = [mapping.get(token.token_type) for token in tokens]
 
                 parsed, operations = parser(terminals)
@@ -54,8 +54,6 @@ def main():
             except Exception as e:
                 print(e)
                 return
-
-            error = Error(program)
 
             collector = TypeCollector(error)
             collector.visit(ast)
@@ -77,12 +75,12 @@ def main():
 
     else:
 
-        for i in range(1, 45):
+        for i in range(41, 45):
             with open(src_path / f'test/{i}.hulk', 'r') as f:
                 program = f.read()
 
             try:
-                tokens = lexer(program)
+                tokens = lexer(program, Error(program))
                 terminals = [mapping.get(token.token_type) for token in tokens]
 
                 parsed, operations = parser(terminals)

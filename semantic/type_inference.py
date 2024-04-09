@@ -127,6 +127,8 @@ class TypeInference:
             if not function_declaration.type:
                 function.return_type = inferred_type
 
+        self.current_method = None
+
         return self.get_return_type(function_declaration.type.lex) if function_declaration.type \
             else function_declaration.inferred_type
 
@@ -172,6 +174,8 @@ class TypeInference:
 
         for method_declaration in declaration.methods:
             self.visit(method_declaration, scope)
+
+        self.current_type = None
 
         return value
 
@@ -238,10 +242,10 @@ class TypeInference:
         if call.obj is None:
             if call.is_attribute:
                 return UndefinedType()
-            if self.current_type and self.current_method and call.token.lex == "base":
+            if self.current_type and self.current_method and call.id.lex == "base":
                 success, method = self.current_type.get_base(self.current_method.name)
             else:
-                success, method = self.context.get_method(call.token.lex)
+                success, method = self.context.get_method(call.id.lex)
         else:
             obj_type = self.visit(call.obj, scope)
 
@@ -250,24 +254,24 @@ class TypeInference:
             if obj_type in [None, UnknownType()]:
                 return UnknownType()
             if call.is_attribute:
-                success, attribute = obj_type.get_attribute(call.token.lex)
+                success, attribute = obj_type.get_attribute(call.id.lex)
 
                 if not success:
                     return UndefinedType()
 
                 return attribute.type or attribute.inferred_type
 
-            success, method = obj_type.get_method(call.token.lex)
+            success, method = obj_type.get_method(call.id.lex)
 
         if not success:
-            return UnknownType()
+            return UndefinedType()
 
         param_types = [self.visit(param, scope) for param in call.params]
         call.params_inferred_type = param_types
 
         for i in range(len(method.param_types)):
-            if (isinstance(param_types[i], UnknownType) and param_types[i] != method.param_types[i] and
-                    not isinstance(method.param_types[i], UnknownType)):
+            if (isinstance(param_types[i], UnknownType) and isinstance(call.params[i].inferred_type, UnknownType)
+                    and param_types[i] != method.param_types[i] and not isinstance(method.param_types[i], UnknownType)):
                 self.changes = True
                 call.params[i].inferred_type = method.param_types[i]
 

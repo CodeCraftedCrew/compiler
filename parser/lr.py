@@ -69,8 +69,32 @@ class LRParser(Parser):
 
             try:
                 action, tag = self.action[state, lookahead.Name]
-            except KeyError as k:
-                raise Exception(f"Unexpected token {lookahead.Name}")
+            except KeyError:
+                print(f"Unexpected token {lookahead.Name}. Attempting panic-mode error recovery.")
+                while True:
+                    try:
+                        for i in range(len(stack) - 2, -1, -2):
+                            if stack[i].is_non_terminal and (state, stack[i].Name) in self.go_to:
+                                a = stack[i]
+                                break
+                        else:
+                            raise Exception("Panic-mode error recovery failed. Cannot proceed.")
+
+                        while cursor < len(w) and (state, w[cursor].Name) not in self.action:
+                            cursor += 1
+
+                        if cursor == len(w):
+                            raise Exception("Panic-mode error recovery failed. Cannot proceed.")
+
+                        lookahead = a
+                        action, tag = self.go_to[state, a.Name]
+
+                        break
+
+                    except Exception as e:
+                        # Error during panic-mode recovery, raise and handle the original error
+                        print(f"Panic-mode error recovery failed: {e}")
+                        raise Exception(f"Original error: Unexpected token {lookahead.Name}")
 
             match action:
                 case Action.SHIFT:

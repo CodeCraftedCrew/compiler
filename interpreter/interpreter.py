@@ -1,6 +1,7 @@
 import math
 import random
 
+from ast_nodes.ast import BinaryNode
 from ast_nodes.hulk import VariableDeclarationNode, VariableNode, DestructiveAssignNode, IfNode, ForNode, WhileNode, \
     BlockNode, LetNode, InstantiateNode, VectorNode, IndexNode, ModNode, PlusNode, MinusNode, StarNode, DivNode, OrNode, \
     AndNode, EqualNode, DifferentNode, LessNode, LessEqualNode, GreaterNode, GreaterEqualNode, IsNode, AsNode, \
@@ -9,8 +10,8 @@ from ast_nodes.hulk import VariableDeclarationNode, VariableNode, DestructiveAss
 from errors.error import Error
 from lexer.tools import Token, TokenType
 from semantic.context import Context
-from semantic.scope import Scope, InstanceInfo, VariableInfo
-from semantic.types import NullType, NumberType
+from semantic.scope import Scope, InstanceInfo
+from semantic.types import NullType, RangeType, ObjectType
 from visitor import visitor
 
 
@@ -33,8 +34,23 @@ class Interpreter:
             "exp": math.exp,
             "log": math.log,
             "rand": random.random,
-            "range": range
+            "range": None
         }
+
+        self.symbols_table[f"built-range.built-range.ctor"] = ["min", "max"]
+        self.symbols_table["built-range.attribute:min"] = VariableNode(Token("min", TokenType.IDENTIFIER, -1, -1))
+        self.symbols_table["built-range.attribute:max"] = VariableNode(Token("max", TokenType.IDENTIFIER, -1, -1))
+        self.symbols_table["built-range.attribute:current"] = MinusNode(
+            VariableNode(Token("min", TokenType.IDENTIFIER, -1, -1)), LiteralNode(Token("1", TokenType.NUMBER, -1, -1)))
+
+        self_var = VariableNode(Token("self", TokenType.IDENTIFIER, -1, -1))
+        current_call = CallNode(self_var, Token("current", TokenType.IDENTIFIER, -1, -1), [], True)
+
+        self.symbols_table["built-range.method:next"] = [], LessNode(
+            DestructiveAssignNode(current_call, PlusNode(current_call, LiteralNode(Token("1", TokenType.NUMBER, -1, -1)))),
+            CallNode(self_var, Token("max", TokenType.IDENTIFIER, -1, -1), [], True))
+
+        self.symbols_table["built-range.method:current"] = [], current_call
 
     @visitor.on('node')
     def visit(self, node, scope):
@@ -66,7 +82,7 @@ class Interpreter:
         if isinstance(node.id, CallNode):
             variable_info = scope.find_variable("self")
             if variable_info:
-                variable_info.value.attributes[node.id.token.lex] = expr_value
+                variable_info.value.attributes[node.id.id.lex] = expr_value
 
         return expr_value
 
@@ -88,7 +104,7 @@ class Interpreter:
         iterable_value = self.visit(node.iterable, scope)
         result = NullType
 
-        if (isinstance(node.iterable, CallNode) and node.iterable.token.lex == "range") or isinstance(iterable_value, list):
+        if isinstance(iterable_value, list):
             for item in iterable_value:
                 child_scope = scope.create_child_scope()
                 child_scope.define_variable(node.item_id.lex, value=item)
@@ -97,15 +113,18 @@ class Interpreter:
             return result
 
         transform = LetNode(
-            declarations=[VariableDeclarationNode(Token("iterable", TokenType.IDENTIFIER, -1, -1), None, node.iterable)],
+            declarations=[
+                VariableDeclarationNode(Token("iterable", TokenType.IDENTIFIER, -1, -1), None, node.iterable)],
             body=WhileNode(
-                condition=CallNode(VariableNode(Token("iterable", TokenType.IDENTIFIER, -1, -1)), Token("next", TokenType.IDENTIFIER, -1, -1), []),
+                condition=CallNode(VariableNode(Token("iterable", TokenType.IDENTIFIER, -1, -1)),
+                                   Token("next", TokenType.IDENTIFIER, -1, -1), []),
                 body=LetNode(
-                    declarations=[VariableDeclarationNode(node.item_id, None, CallNode(VariableNode(Token("iterable", TokenType.IDENTIFIER, -1, -1)), Token("current", TokenType.IDENTIFIER, -1, -1), []))],
+                    declarations=[VariableDeclarationNode(node.item_id, None, CallNode(
+                        VariableNode(Token("iterable", TokenType.IDENTIFIER, -1, -1)),
+                        Token("current", TokenType.IDENTIFIER, -1, -1), []))],
                     body=node.body)))
 
         return self.visit(transform, scope)
-
 
     @visitor.when(WhileNode)
     def visit(self, node: WhileNode, scope: Scope):
@@ -151,8 +170,7 @@ class Interpreter:
 
             result = []
 
-            if (isinstance(node.iterator, CallNode) and node.iterator.token.lex == "range") or isinstance(
-                    iterator_value, list):
+            if isinstance(iterator_value, list):
                 for item in iterator_value:
                     child_scope = scope.create_child_scope()
                     child_scope.define_variable(node.item.lex, value=item)
@@ -164,16 +182,16 @@ class Interpreter:
             new_scope.define_variable("iterator", value=iterator_value)
 
             condition = CallNode(VariableNode(Token("iterator", TokenType.IDENTIFIER, -1, -1)),
-                                       Token("next", TokenType.IDENTIFIER, -1, -1), [])
+                                 Token("next", TokenType.IDENTIFIER, -1, -1), [])
 
             condition_value = self.visit(condition, new_scope)
             while condition_value:
                 item_value = self.visit(CallNode(
-                            VariableNode(Token("iterator", TokenType.IDENTIFIER, -1, -1)),
-                            Token("current", TokenType.IDENTIFIER, -1, -1), []), new_scope)
+                    VariableNode(Token("iterator", TokenType.IDENTIFIER, -1, -1)),
+                    Token("current", TokenType.IDENTIFIER, -1, -1), []), new_scope)
 
                 while_scope = new_scope.create_child_scope()
-                while_scope.define_variable(node.item.lex, item_value)
+                while_scope.define_variable(node.item.lex, value=item_value)
 
                 result.append(self.visit(node.generator, while_scope))
                 condition_value = self.visit(condition, new_scope)
@@ -310,20 +328,27 @@ class Interpreter:
                 return float(node.lex.lex)
             else:
                 return int(node.lex.lex)
-        if (node.lex.token_type == TokenType.TRUE):
+        if node.lex.token_type == TokenType.TRUE:
             return True
-        if (node.lex.token_type == TokenType.FALSE):
+        if node.lex.token_type == TokenType.FALSE:
             return False
         return str(node.lex.lex)
 
-    
     @visitor.when(CallNode)
     def visit(self, node: CallNode, scope: Scope):
-        func_name = node.token.lex
+        func_name = node.id.lex
         if func_name in self.built_in_functions:
+
+            if func_name == "range":
+                instantiate = InstantiateNode(Token("built-range", TokenType.IDENTIFIER, node.id.line,
+                                                    node.id.column), node.params)
+                instantiate.inferred_type = RangeType()
+                return self.visit(instantiate, scope)
+
             func = self.built_in_functions[func_name]
             args = [self.visit(arg, scope) for arg in node.params]
             return func(*args)
+
         else:
             new_scope = self.global_scope.create_child_scope()
             args = [self.visit(arg, scope) for arg in node.params]
@@ -335,31 +360,36 @@ class Interpreter:
                 assert isinstance(obj_value, InstanceInfo), "Operator . can only be applied to instances."
 
                 if node.is_attribute:
-                    return obj_value.attributes[node.token.lex]
+                    return obj_value.attributes[node.id.lex]
                 else:
-                    params, method = self.symbols_table[f"{obj_value.type.name}.method:{node.token.lex}"]
+                    while f"{obj_value.type.name}.method:{node.id.lex}" not in self.symbols_table:
+                        obj_value = obj_value.parent
+                        if not obj_value.parent:
+                            break
+
+                    if not obj_value:
+                        self.error("Method not found")
+                        return NullType()
+
+                    params, method = self.symbols_table[f"{obj_value.type.name}.method:{node.id.lex}"]
 
                     for i in range(len(params)):
                         new_scope.define_variable(params[i], value=args[i])
 
                     new_scope.define_variable("self", value=obj_value)
 
-                    self.current_method.append(node.token.lex)
+                    self.current_method.append(node.id.lex)
                     result = self.visit(method, new_scope)
-                    self.current_method.remove(node.token.lex)
+                    self.current_method.remove(node.id.lex)
 
                     return result
             else:
 
-                if node.token.lex == "base":
-
+                if node.id.lex == "base":
                     self_instance = scope.find_variable("self").value
                     return self.get_base_method(self_instance, args)
 
-                if node.token.lex in self.built_in_functions.keys():
-                    return self.built_in_functions[node.token.lex](args)
-
-                params, function = self.symbols_table[f"function:{node.token.lex}"]
+                params, function = self.symbols_table[f"function:{node.id.lex}"]
 
                 for i in range(len(params)):
                     new_scope.define_variable(params[i], value=args[i])
@@ -384,10 +414,12 @@ class Interpreter:
         self.symbols_table[f"{node.id.lex}.{node.id.lex}.ctor"] = [param.id.lex for param in node.params]
 
         if node.inherits:
-            self.symbols_table[f"from:{node.id.lex}to:{node.inherits.id.lex}"] = [arg for arg in node.inherits.arguments]
+            self.symbols_table[f"from:{node.id.lex}to:{node.inherits.id.lex}"] = [arg for arg in
+                                                                                  node.inherits.arguments]
 
         for attribute_definition in node.attributes:
-            self.symbols_table[f"{node.id.lex}.attribute:{attribute_definition.id.lex}"] = attribute_definition.expression
+            self.symbols_table[
+                f"{node.id.lex}.attribute:{attribute_definition.id.lex}"] = attribute_definition.expression
 
         for method_declaration in node.methods:
             self.symbols_table[f"{node.id.lex}.method:{method_declaration.id.lex}"] = (
@@ -422,46 +454,27 @@ class Interpreter:
 
     def get_base_method(self, self_instance: InstanceInfo, param_values):
         method_name = self.current_method[-1]
-        initial_args = self_instance.param_values
 
         assert method_name is not None, "`base` method can only be called from inside another one"
 
-        child = self_instance.type
         parent = self_instance.parent
 
         while parent:
 
-            arguments = self.symbols_table[f"from:{child.name}to:{parent.name}"]
-
-            new_scope = Scope()
-
-            for i in range(len(self_instance.param_names)):
-                new_scope.define_variable(self_instance.param_names[i], value=self_instance.param_values[i])
-
-            names = list(parent.params.keys())
-            values = [self.visit(arg, new_scope) for arg in arguments]
-
-            if len(values) != len(parent.params):
-                values = initial_args
-
-            parent_instance = self.instantiate(parent, names, values)
-
-            method_identifier = f"{parent.name}.method:{method_name}"
+            method_identifier = f"{parent.type.name}.method:{method_name}"
 
             params, method = self.symbols_table.get(method_identifier, ([], None))
 
             if method:
 
                 scope = self.global_scope.create_child_scope()
-                scope.define_variable("self", value=parent_instance)
+                scope.define_variable("self", value=parent)
 
                 for i in range(len(params)):
                     scope.define_variable(params[i], value=param_values[i])
 
                 return self.visit(method, scope)
 
-            self_instance = parent_instance
-            child = parent
             parent = parent.parent
 
         raise Exception(f"Base for method {method_name} not found")
@@ -477,7 +490,19 @@ class Interpreter:
 
         attributes = {attr: self.visit(self.symbols_table[f"{typex.name}.attribute:{attr}"], scope) for attr in attrs}
 
-        instance = InstanceInfo(typex, param_names, param_values, attributes, typex.parent)
+        if typex.parent and typex.parent != ObjectType():
+
+            parent_arguments = self.symbols_table[f"from:{typex.name}to:{typex.parent.name}"]
+
+            parent_names = list(typex.parent.params.keys())
+            parent_values = [self.visit(arg, scope) for arg in parent_arguments]
+
+            if len(parent_values) != len(typex.parent.params):
+                parent_values = param_values
+
+            instance = InstanceInfo(typex, param_names, param_values, attributes,
+                                    self.instantiate(typex.parent, parent_names, parent_values))
+        else:
+            instance = InstanceInfo(typex, param_names, param_values, attributes, None)
 
         return instance
-

@@ -1,9 +1,9 @@
 import dill
 from pathlib import Path
-from typing import List
 
 from automaton.automaton import State
 from automaton.operations import get_final_states
+from errors.error import Error
 from lexer.pattern import TokenPattern
 from lexer.regex import get_regex_parser
 from lexer.tools import Token, TokenType
@@ -32,7 +32,8 @@ class Lexer:
             self.automaton = self._build_automaton()
 
             if path and Path(path).exists():
-                dill.dump([(pattern.regex, pattern.token_type.name) for pattern in patterns], open(f'{path}/patterns.pkl', 'wb'))
+                dill.dump([(pattern.regex, pattern.token_type.name) for pattern in patterns],
+                          open(f'{path}/patterns.pkl', 'wb'))
                 dill.dump(self.automaton, open(f'{path}/automaton.pkl', 'wb'))
 
         self.eof = eof
@@ -73,15 +74,39 @@ class Lexer:
 
         return final, final_lex
 
-    def _tokenize(self, text):
+    def _tokenize(self, text, error: Error):
 
         line = column = 1
         i = 0
+        unexpected = False
         while i < len(text):
+
+            if unexpected:
+
+                if text[i] == "\n":
+                    if i + 1 < len(text) and text[i+1] == "\r":
+                        i += 1
+                    line += 1
+                    column = 0
+                if text[i] == "\r":
+                    line += 1
+                    column = 0
+                if text[i] == "\t":
+                    column += 4
+                if text[i] == ";":
+                    unexpected = False
+                    column += 1
+                else:
+                    column += 1
+                i += 1
+                continue
+
             state, lex = self._walk(text[i:])
 
             if state is None:
-                raise Exception(f"Unexpected character '{text[i]}' at {line}:{column}")
+                error(f"Unexpected character '{text[i]}' at {line}:{column}")
+                unexpected = True
+                continue
 
             i += len(lex)
 
@@ -107,5 +132,5 @@ class Lexer:
 
         yield '$', TokenType.EOF, line, column
 
-    def __call__(self, text):
-        return [Token(lex, ttype, line, column) for lex, ttype, line, column in self._tokenize(text)]
+    def __call__(self, text, error: Error):
+        return [Token(lex, ttype, line, column) for lex, ttype, line, column in self._tokenize(text, error)]

@@ -72,6 +72,8 @@ class TypeBuilder:
         for method_declaration in declaration.methods:
             self.visit(method_declaration)
 
+        self.current_type = None
+
     @visitor.when(AttributeDeclarationNode)
     def visit(self, declaration: AttributeDeclarationNode):
 
@@ -115,6 +117,8 @@ class TypeBuilder:
 
         for method_declaration in declaration.methods:
             self.visit(method_declaration)
+
+        self.current_type = None
 
     @visitor.when(FunctionDeclarationNode)
     def visit(self, declaration: FunctionDeclarationNode):
