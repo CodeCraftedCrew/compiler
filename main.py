@@ -22,8 +22,6 @@ def handle_args():
     return args.path.split('=')[1]
 
 
-
-
 def main():
     path = Path(handle_args())
 
@@ -77,12 +75,12 @@ def main():
 
     else:
 
-        for i in range(1, 45):
+        for i in range(41, 45):
             with open(src_path / f'test/{i}.hulk', 'r') as f:
                 program = f.read()
 
             try:
-                tokens = lexer(program)
+                tokens = lexer(program, Error(program))
                 terminals = [mapping.get(token.token_type) for token in tokens]
 
                 parsed, operations = parser(terminals)

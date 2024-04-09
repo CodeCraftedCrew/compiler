@@ -321,6 +321,13 @@ class RangeType(Type):
                         Method("next", [], [], BooleanType(), -1)]
         self.parent = ObjectType()
 
+        self.attributes = [Attribute("min", NumberType), Attribute("max", NumberType),
+                           Attribute("current", NumberType)]
+
+        self.params = {"min": NumberType, "max": NumberType}
+
+
+
 
 class VectorType(Type):
     def __init__(self, typex):
@@ -337,9 +344,9 @@ class VectorType(Type):
 
 
 class IterableType(Type):
-    def __init__(self):
+    def __init__(self, item_type=None):
         Type.__init__(self, "Iterable", is_protocol=True)
-        self.methods = [Method("current", [], [], ObjectType(), -1),
+        self.methods = [Method("current", [], [], item_type or ObjectType(), -1),
                         Method("next", [], [], BooleanType(), -1)]
 
     def conforms_to(self, other):

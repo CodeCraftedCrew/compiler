@@ -97,11 +97,11 @@ class DestructiveAssignNode(ExpressionNode):
 
 
 class CallNode(ExpressionNode):
-    def __init__(self, obj: ExpressionNode, token: Token, params: list[ParameterDeclarationNode],
+    def __init__(self, obj: ExpressionNode, idx: Token, params: list[ExpressionNode],
                  is_attribute=False):
         super().__init__()
         self.obj = obj
-        self.token = token
+        self.id = idx
         self.params = params
         self.is_attribute = is_attribute
         self.params_inferred_type = []
