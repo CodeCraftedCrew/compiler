@@ -6,9 +6,9 @@ Yisell Martínez Noa C412
 
 Lauren Peraza García C311
 
-## Como ejecutar el proyecto
+## Cómo ejecutar el proyecto
 
-Tenemos dos opciones, la primera es abrir una consola en la raiz del proyecto y ejecutar el siguiente comando, donde file es el path del arhivo que se quiere ejecutar
+Tenemos dos opciones, la primera es abrir una consola en la raíz del proyecto y ejecutar el siguiente comando, donde file es el path del arhivo que se quiere ejecutar
 
 ```shell
 python main.py path={file}
