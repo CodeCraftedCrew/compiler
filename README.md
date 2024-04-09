@@ -163,17 +163,74 @@ La gramática de Hulk se compone de varios elementos clave que permiten definir 
 
 Representan elementos sintácticos que pueden ser descompuestos en otros elementos hasta llegar a los terminales.
 
+**Estructura del programa**
+
 **program:** Es el nodo raíz, representa todo el programa.
 
 **head_program:** Representa el encabezado de un programa en Hulk.
 
+**statement:** Representa el punto de entrada al programa. Puede ser una instrucción individual en el código Hulk o un bloque de instrucciones.
+
+
+**Declaraciones**
+
 **define_statement:** Representa la declaración de funciones, de tipos y de protocolos.
 
-**statement:** Representa el punto de entrada al programa. Puede ser una instrucción individual en el código Hulk o un bloque de instrucciones.
+**function_definition:** Define la estructura y el comportamiento de una función en Hulk.
+
+**arguments_definition:** Representa la definición de los argumentos de una función.
+
+**argument_list_definition:** Representa una lista de definiciones de argumentos en Hulk.
+
+**type_definition:** Define la estructura de un tipo en Hulk, que puede incluir atributos y métodos.
+
+**type_arguments:** Representa los argumentos utilizados en la definición de un tipo en Hulk.
+
+**type_inherits:** Representa la declaración de herencia de un tipo en Hulk.
+
+**inherits_declaration:** Representa la declaración de argumentos de los tipos de los cuales se hereda.
+
+**type_body:** Representa el cuerpo de un tipo en Hulk, que puede incluir definiciones de atributos y métodos.
+
+**type_element:** Representa un elemento dentro del cuerpo de un tipo en Hulk.
+
+**attribute_definition:** Define la declaración de un atributo en Hulk.
+
+**protocol_definition:** Define la estructura y los requisitos de un protocolo en Hulk.
+
+**extends_definition:** Define la extensión de un tipo en Hulk.
+
+**extends_multiple_identifier:** Representa múltiples identificadores extendidos en una declaración en Hulk.
+
+**protocol_body:** Representa el cuerpo de un protocolo en Hulk, que contiene las definiciones de los métodos requeridos por el protocolo.
+
+**protocol_arguments_definition:** Representa la definición de los argumentos requeridos por un protocolo en Hulk.
+
+**protocol_multiple_arguments_definition:** Representa múltiples definiciones de argumentos en un protocolo.
+
+**declaration_expression_block:** Representa una declaración de variables que contiene un bloque al final.
+
+**declaration_expression:** Representa una expresión que declara una variable en Hulk. No contiene un bloque al final.
+
+**type_declaration:** Representa la declaración de un tipo de variable en Hulk.
+
+**multiple_declaration:** Representa una declaración de múltiples variables en Hulk.
+
+
+**Instrucciones y bloques**
 
 **block:** Representa un bloque de código delimitado por llaves ({}), que puede contener una secuencia de instrucciones. También puede ser un if, while, for o declaración de variables que contenga al final un bloque.
 
 **non_block:** Representa una instrucción que no está dentro de un bloque. También puede ser un if, while, for o declaración de variables que no contenga al final un bloque.
+
+**optional_semicolon:** Representa la posibilidad de un punto y coma opcional al final de un bloque.
+
+**block_body:** Representa el cuerpo de un bloque, que consiste en una lista de instrucciones.
+
+**statement_list:** Representa una lista de instrucciones.
+
+
+**Control de flujo**
 
 **if_statement_block:** Representa un condicional "if" que contiene un bloque al final.
 
@@ -181,15 +238,7 @@ Representan elementos sintácticos que pueden ser descompuestos en otros element
 
 **for_statement_block:** Representa un bucle "for" que contiene un bloque al final.
 
-**declaration_expression_block:** Representa una declaración de variables que contiene un bloque al final.
-
 **elif_statement_block:** Representa un condicional "elif" que contiene un bloque al final.
-
-**optional_semicolon:** Representa la posibilidad de un punto y coma opcional al final de un bloque.
-
-**block_body:** Representa el cuerpo de un bloque, que consiste en una lista de instrucciones.
-
-**statement_list:** Representa una lista de instrucciones.
 
 **if_statement:** Define una estructura de control condicional "if" con "else" en Hulk, que puede incluir declaraciones "elif". No contiene un bloque al final.
 
@@ -199,11 +248,8 @@ Representan elementos sintácticos que pueden ser descompuestos en otros element
 
 **for_statement:** Define una estructura de control de bucle "for" en Hulk. No contiene un bloque al final.
 
-**declaration_expression:** Representa una expresión que declara una variable en Hulk. No contiene un bloque al final.
 
-**type_declaration:** Representa la declaración de un tipo de variable en Hulk.
-
-**multiple_declaration:** Representa una declaración de múltiples variables en Hulk.
+**Expresiones**
 
 **expression:** Representa una expresión en Hulk, que puede ser una expresión aritmética, una invocación de función, una asignación, etc.
 
@@ -246,38 +292,6 @@ Representan elementos sintácticos que pueden ser descompuestos en otros element
 **member_access:** Representa una expresión que accede a un miembro de una estructura en Hulk.
 
 **instantiation:** Representa la instanciación de un objeto en Hulk.
-
-**function_definition:** Define la estructura y el comportamiento de una función en Hulk.
-
-**arguments_definition:** Representa la definición de los argumentos de una función.
-
-**argument_list_definition:** Representa una lista de definiciones de argumentos en Hulk.
-
-**type_definition:** Define la estructura de un tipo en Hulk, que puede incluir atributos y métodos.
-
-**type_arguments:** Representa los argumentos utilizados en la definición de un tipo en Hulk.
-
-**type_inherits:** Representa la declaración de herencia de un tipo en Hulk.
-
-**inherits_declaration:** Representa la declaración de argumentos de los tipos de los cuales se hereda.
-
-**type_body:** Representa el cuerpo de un tipo en Hulk, que puede incluir definiciones de atributos y métodos.
-
-**type_element:** Representa un elemento dentro del cuerpo de un tipo en Hulk.
-
-**attribute_definition:** Define la declaración de un atributo en Hulk.
-
-**protocol_definition:** Define la estructura y los requisitos de un protocolo en Hulk.
-
-**extends_definition:** Define la extensión de un tipo en Hulk.
-
-**extends_multiple_identifier:** Representa múltiples identificadores extendidos en una declaración en Hulk.
-
-**protocol_body:** Representa el cuerpo de un protocolo en Hulk, que contiene las definiciones de los métodos requeridos por el protocolo.
-
-**protocol_arguments_definition:** Representa la definición de los argumentos requeridos por un protocolo en Hulk.
-
-**protocol_multiple_arguments_definition:** Representa múltiples definiciones de argumentos en un protocolo.
 
 #### Terminales
 
