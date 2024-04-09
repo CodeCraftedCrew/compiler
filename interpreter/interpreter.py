@@ -422,29 +422,12 @@ class Interpreter:
 
     def get_base_method(self, self_instance: InstanceInfo, param_values):
         method_name = self.current_method[-1]
-        initial_args = self_instance.param_values
 
         assert method_name is not None, "`base` method can only be called from inside another one"
 
-        child = self_instance.type
         parent = self_instance.parent
 
         while parent:
-
-            arguments = self.symbols_table[f"from:{child.name}to:{parent.name}"]
-
-            new_scope = Scope()
-
-            for i in range(len(self_instance.param_names)):
-                new_scope.define_variable(self_instance.param_names[i], value=self_instance.param_values[i])
-
-            names = list(parent.params.keys())
-            values = [self.visit(arg, new_scope) for arg in arguments]
-
-            if len(values) != len(parent.params):
-                values = initial_args
-
-            parent_instance = self.instantiate(parent, names, values)
 
             method_identifier = f"{parent.name}.method:{method_name}"
 
@@ -453,15 +436,13 @@ class Interpreter:
             if method:
 
                 scope = self.global_scope.create_child_scope()
-                scope.define_variable("self", value=parent_instance)
+                scope.define_variable("self", value=parent)
 
                 for i in range(len(params)):
                     scope.define_variable(params[i], value=param_values[i])
 
                 return self.visit(method, scope)
 
-            self_instance = parent_instance
-            child = parent
             parent = parent.parent
 
         raise Exception(f"Base for method {method_name} not found")
@@ -477,7 +458,16 @@ class Interpreter:
 
         attributes = {attr: self.visit(self.symbols_table[f"{typex.name}.attribute:{attr}"], scope) for attr in attrs}
 
-        instance = InstanceInfo(typex, param_names, param_values, attributes, typex.parent)
+        parent_arguments = self.symbols_table[f"from:{typex.name}to:{typex.parent.name}"]
+
+        parent_names = list(typex.parent.params.keys())
+        parent_values = [self.visit(arg, scope) for arg in parent_arguments]
+
+        if len(parent_values) != len(typex.parent.params):
+            parent_values = param_values
+
+        instance = InstanceInfo(typex, param_names, param_values, attributes,
+                                self.instantiate(typex.parent, parent_names, parent_values) if typex.parent else None)
 
         return instance
 

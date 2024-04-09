@@ -21,7 +21,7 @@ class FunctionInfo:
 
 
 class InstanceInfo:
-    def __init__(self, typex, param_names, param_values, attributes, parent: Type):
+    def __init__(self, typex, param_names, param_values, attributes, parent):
         self.type = typex
         self.param_names = param_names
         self.param_values = param_values
