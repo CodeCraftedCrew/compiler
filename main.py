@@ -75,7 +75,7 @@ def main():
 
     else:
 
-        for i in range(41, 45):
+        for i in range(1, 45):
             with open(src_path / f'test/{i}.hulk', 'r') as f:
                 program = f.read()
 
