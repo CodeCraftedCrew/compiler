@@ -163,7 +163,7 @@ La gramática de Hulk se compone de varios elementos clave que permiten definir 
 
 Representan elementos sintácticos que pueden ser descompuestos en otros elementos hasta llegar a los terminales.
 
-**Estructura del programa**
+*Estructura del programa*
 
 **program:** Es el nodo raíz, representa todo el programa.
 
@@ -172,7 +172,7 @@ Representan elementos sintácticos que pueden ser descompuestos en otros element
 **statement:** Representa el punto de entrada al programa. Puede ser una instrucción individual en el código Hulk o un bloque de instrucciones.
 
 
-**Declaraciones**
+*Declaraciones*
 
 **define_statement:** Representa la declaración de funciones, de tipos y de protocolos.
 
@@ -217,7 +217,7 @@ Representan elementos sintácticos que pueden ser descompuestos en otros element
 **multiple_declaration:** Representa una declaración de múltiples variables en Hulk.
 
 
-**Instrucciones y bloques**
+*Instrucciones y bloques*
 
 **block:** Representa un bloque de código delimitado por llaves ({}), que puede contener una secuencia de instrucciones. También puede ser un if, while, for o declaración de variables que contenga al final un bloque.
 
@@ -230,7 +230,7 @@ Representan elementos sintácticos que pueden ser descompuestos en otros element
 **statement_list:** Representa una lista de instrucciones.
 
 
-**Control de flujo**
+*Control de flujo*
 
 **if_statement_block:** Representa un condicional "if" que contiene un bloque al final.
 
@@ -249,7 +249,7 @@ Representan elementos sintácticos que pueden ser descompuestos en otros element
 **for_statement:** Define una estructura de control de bucle "for" en Hulk. No contiene un bloque al final.
 
 
-**Expresiones**
+*Expresiones*
 
 **expression:** Representa una expresión en Hulk, que puede ser una expresión aritmética, una invocación de función, una asignación, etc.
 
