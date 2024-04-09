@@ -1,6 +1,5 @@
 import dill
 from pathlib import Path
-from typing import List
 
 from automaton.automaton import State
 from automaton.operations import get_final_states

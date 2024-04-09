@@ -258,6 +258,12 @@ class TypeChecker:
                 success, method = self.current_type.get_base(self.current_method.name)
             else:
                 success, method = self.context.get_method(call.token.lex)
+
+
+
+                if not success:
+                    self.error(method, token=call.token)
+                    return
         else:
             self.visit(call.obj, scope)
 
@@ -440,7 +446,7 @@ class TypeChecker:
 
         self.visit(node.right, scope)
 
-        if node.right.inferred_type in [UnknownType(), UndefinedType()]:
+        if node.right.inferred_type in [UnknownType(), UndefinedType(), None]:
             self.error(f"It was not possible to infer the type for left operator")
 
         if (isinstance(node, PlusNode) or isinstance(node, MinusNode) or isinstance(node, DivNode)

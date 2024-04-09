@@ -127,6 +127,8 @@ class TypeInference:
             if not function_declaration.type:
                 function.return_type = inferred_type
 
+        self.current_method = None
+
         return self.get_return_type(function_declaration.type.lex) if function_declaration.type \
             else function_declaration.inferred_type
 
@@ -172,6 +174,8 @@ class TypeInference:
 
         for method_declaration in declaration.methods:
             self.visit(method_declaration, scope)
+
+        self.current_type = None
 
         return value
 
@@ -242,6 +246,9 @@ class TypeInference:
                 success, method = self.current_type.get_base(self.current_method.name)
             else:
                 success, method = self.context.get_method(call.token.lex)
+
+                if not success:
+                    return UndefinedType()
         else:
             obj_type = self.visit(call.obj, scope)
 
