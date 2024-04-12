@@ -123,6 +123,10 @@ class TypeChecker:
             for error in errors:
                 self.error(error[0], line=error[1])
 
+        self.current_type = None
+
+
+
     @visitor.when(AttributeDeclarationNode)
     def visit(self, attribute_declaration: AttributeDeclarationNode, scope: Scope):
 
@@ -188,6 +192,8 @@ class TypeChecker:
                 self.error(f"Inferred type does not conform to declared type for function {function_declaration.id.lex}"
                            + f" in type {self.current_type.name}" if self.current_type else "",
                            line=function_declaration.id.line)
+
+        self.current_method = None
 
     @visitor.when(ProtocolDeclarationNode)
     def visit(self, node: ProtocolDeclarationNode, scope: Scope):
@@ -270,6 +276,9 @@ class TypeChecker:
             obj_type = call.obj.inferred_type
 
             if call.is_attribute:
+
+                if self.current_type is None:
+                    self.error(f"Attribute {call.id.lex} is not defined in the current scope", token=call.id)
 
                 success, attribute = obj_type.get_attribute(call.id.lex)
 
